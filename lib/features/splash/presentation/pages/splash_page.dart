@@ -91,6 +91,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       AppAssets.logo,
                       height: 120, // Proud and centered
                       fit: BoxFit.contain,
+                      color: LightColors.logoWhite, // Tint the logo to pristine white
                       errorBuilder: (context, error, stackTrace) => const Text(
                         'P A T H',
                         style: TextStyle(
