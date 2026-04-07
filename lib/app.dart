@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:path_app/features/splash/presentation/pages/splash_page.dart';
 import 'core/navigation/app_router.dart';
 
 class PathApp extends StatelessWidget {
