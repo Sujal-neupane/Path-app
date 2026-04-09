@@ -45,3 +45,6 @@ class TokenStorageService {
     await _prefs.remove(_tokenKey);
   }
 }
+
+
+// so basically this page defines a TokenStorageService class that uses SharedPreferences to store and manage authentication tokens and user IDs. It provides methods to save, retrieve, check existence, and clear tokens and user IDs, ensuring secure handling of sensitive authentication data within the application.
