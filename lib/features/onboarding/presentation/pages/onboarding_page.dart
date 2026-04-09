@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:path_app/features/auth/presentation/screens/login_screen.dart';
+
 import '../../../../core/theme/light_colors.dart';
 import '../widgets/onboarding_item.dart';
 import 'dart:math' as math;
@@ -59,12 +61,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
         curve: Curves.fastOutSlowIn,
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen())); //
         const SnackBar(
           content: Text('Transitioning to Authentication Flow...'),
           backgroundColor: LightColors.forestPrimary,
-        ),
-      );
+        );
     }
   }
 

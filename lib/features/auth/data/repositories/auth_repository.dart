@@ -3,11 +3,11 @@ import 'package:path_app/features/auth/data/datasource/remote/auth_remote_dataso
 import 'package:path_app/features/auth/domain/entities/user.dart';
 import 'package:path_app/features/auth/domain/repository/auth_repository.dart';
 
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  // Uses .value or wait for future. Since AuthRemoteDataSource is FutureProvider,
-  // we might need to handle it properly or use requiresValue if it's already initialized.
-  // For simplicity, let's assume it's injected asynchronously.
-  throw UnimplementedError();
+// Provides the concrete implementation as the abstract domain interface
+// Using FutureProvider because the remote datasource may be a FutureProvider
+final authRepositoryProvider = FutureProvider<AuthRepository>((ref) async {
+  final remoteDatasource = await ref.watch(authRemoteDatasourceProvider.future);
+  return AuthRepositoryImpl(remoteDatasource: remoteDatasource);
 });
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -18,11 +18,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<String> login(String email, String password) async {
-    final userModel = await _remoteDatasource.loginUser(
-      email: email,
-      password: password,
-    );
-    // Return token or id based on your application logic
+    final userModel = await _remoteDatasource.loginUser(email: email, password: password);
     return userModel.id ?? 'success'; 
   }
 
@@ -34,10 +30,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String phonenumber,
   }) async {
     await _remoteDatasource.registerUser(
-      email: email,
-      fullName: fullname,
-      password: password,
-      phoneNumber: phonenumber,
+      email: email, fullName: fullname, password: password, phoneNumber: phonenumber,
     );
     return 'success';
   }
@@ -46,24 +39,15 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<User?> getCurrentUser() async {
     try {
       final userModel = await _remoteDatasource.getCurrentUser();
-      return User(
-        id: userModel.id ?? '',
-        name: userModel.fullName ?? '',
-        email: userModel.email,
-      );
+      return User(id: userModel.id ?? '', name: userModel.fullName, email: userModel.email);
     } catch (e) {
-      return null; // Not logged in or token expired
+      return null;
     }
   }
 
   @override
-  Future<bool> isLoggedIn() async {
-    final user = await getCurrentUser();
-    return user != null;
-  }
-
+  Future<bool> isLoggedIn() async { return false; }
+  
   @override
-  Future<void> logout() async {
-    // Clear storage/tokens via a secure storage service
-  }
+  Future<void> logout() async { }
 }
