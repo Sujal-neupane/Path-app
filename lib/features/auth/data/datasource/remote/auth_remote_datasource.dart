@@ -34,6 +34,8 @@ abstract class AuthRemoteDatasource {
     String? phoneNumber,
   });
   Future<AuthApiModel> getUserById(String userId);
+  Future<void> requestPasswordReset(String email);
+  Future<void> resetPassword(String email, String token, String newPassword);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDatasource {
@@ -108,7 +110,39 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDatasource {
     }
   }
 
-  @override 
+  @override
+  Future<void> requestPasswordReset(String email) async {
+    try {
+      final response = await _apiClient.post(ApiEndpoints.requestPasswordReset, data: {
+        'email': email,
+      });
+
+      if (response.statusCode != 200) {
+        throw Exception(response.data['message'] ?? 'Failed to request reset');
+      }
+    } catch (e) {
+      throw Exception('Password reset request error: $e');
+    }
+  }
+
+  @override
+  Future<void> resetPassword(String email, String token, String newPassword) async {
+    try {
+      final response = await _apiClient.post(ApiEndpoints.resetPassword, data: {
+        'email': email,
+        'token': token,
+        'newPassword': newPassword,
+      });
+
+      if (response.statusCode != 200) {
+        throw Exception(response.data['message'] ?? 'Failed to reset password');
+      }
+    } catch (e) {
+      throw Exception('Password reset execution error: $e');
+    }
+  }
+
+  @override
   Future<void> registerUser({
     required String email,
     required String fullName,
