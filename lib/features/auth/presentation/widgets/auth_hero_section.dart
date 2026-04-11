@@ -140,13 +140,14 @@ class _AuthHeroSectionState extends State<AuthHeroSection>
                     ).animate(_taglineFade),
                     child: Text(
                       widget.tagline,
-                      style: AppTextStyles.authSubtitle.copyWith(
+                      style: AppTextStyles.bodyMedium.copyWith(
                         color: LightColors.meadowTint.withValues(alpha: 0.85),
                         letterSpacing: 2.0,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+
                   ),
                 ),
               ],

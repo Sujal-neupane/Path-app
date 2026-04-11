@@ -151,7 +151,9 @@ class _TrailInputFieldState extends State<TrailInputField>
               children: [
                 AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 300),
-                  style: AppTextStyles.fieldLabel.copyWith(
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
                     color: hasError
                         ? LightColors.sosRed
                         : isFocused
@@ -160,6 +162,7 @@ class _TrailInputFieldState extends State<TrailInputField>
                   ),
                   child: Text(widget.label),
                 ),
+
                 // Animated trail indicator (dots only, no emoji)
                 if (isFocused)
                   AnimatedBuilder(

@@ -1,25 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/navigation/app_router.dart';
+import 'core/theme/app_theme.dart';
 
-class PathApp extends StatelessWidget {
+class PathApp extends ConsumerWidget {
   const PathApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(appThemeProvider);
+
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'PATH',
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'PlusJakartaSans', // Using your primary font instead of inter
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(
-            color: Colors.black87,
-          ),
-        ),
-      ),
+      theme: theme.themeData,
       routerConfig: AppRouter.router,
     );
   }
 }
+

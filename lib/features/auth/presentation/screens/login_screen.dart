@@ -171,17 +171,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         // Title
                         Text(
                           'Welcome Back,\nExplorer',
-                          style: AppTextStyles.authTitle.copyWith(
+                          style: AppTextStyles.h1.copyWith(
                             color: const Color(0xFF1A1A1A),
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'Your offline maps are waiting for you.',
-                          style: AppTextStyles.authSubtitle.copyWith(
+                          style: AppTextStyles.bodyLarge.copyWith(
                             color: const Color(0xFF999999),
                           ),
                         ),
+
                         const SizedBox(height: 30),
 
                         // ── Email Field ──

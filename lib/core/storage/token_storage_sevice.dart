@@ -1,5 +1,15 @@
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+final sharedPreferencesProvider = FutureProvider<SharedPreferences>((ref) async {
+  return await SharedPreferences.getInstance();
+});
+
+final tokenStorageServiceProvider = FutureProvider<TokenStorageService>((ref) async {
+  final prefs = await ref.watch(sharedPreferencesProvider.future);
+  return TokenStorageService(prefs);
+});
 
 class TokenStorageService {
   // This class is responsible for securely storing and retrieving authentication tokens, such as JWTs, using Flutter's secure storage solutions. It provides methods to save, retrieve, and delete tokens, ensuring that sensitive information is handled safely within the application.

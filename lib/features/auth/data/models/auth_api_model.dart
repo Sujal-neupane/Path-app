@@ -28,11 +28,11 @@ class AuthApiModel {
 
   factory AuthApiModel.fromJson(Map<String, dynamic> json) {
     return AuthApiModel(
-      id: json['id'] as String? ?? '',
+      id: json['id'] as String? ?? json['_id'] as String? ?? '',
       email: json['email'] as String? ?? '',
-      fullName: json['fullName'] as String? ?? json['name'] as String? ?? '',
+      fullName: json['full_name'] as String? ?? json['fullName'] as String? ?? json['name'] as String? ?? '',
       password: json['password'] as String? ?? '',
-      phoneNumber: json['phoneNumber'] as String? ?? '',
+      phoneNumber: json['phone_number'] as String? ?? json['phoneNumber'] as String? ?? '',
     );
   }
 

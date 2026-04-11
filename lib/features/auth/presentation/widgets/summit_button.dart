@@ -189,12 +189,13 @@ class _SummitButtonState extends State<SummitButton>
       children: [
         Text(
           widget.label,
-          style: AppTextStyles.buttonText.copyWith(
+          style: AppTextStyles.button.copyWith(
             color: Colors.white,
             fontSize: 15,
             letterSpacing: 1.8,
           ),
         ),
+
         const SizedBox(width: 8),
         Icon(
           Icons.arrow_forward_rounded,
@@ -249,12 +250,13 @@ class _SummitButtonState extends State<SummitButton>
               const SizedBox(width: 8),
               Text(
                 'DONE',
-                style: AppTextStyles.buttonText.copyWith(
+                style: AppTextStyles.button.copyWith(
                   color: Colors.white,
                   fontSize: 15,
                   letterSpacing: 1.8,
                 ),
               ),
+
             ],
           ),
         );

@@ -73,22 +73,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDatasource {
 
             if (response.statusCode == 200){
               if(response.data['success'] == true){
-                final data = response.data['data'] as Map<String, dynamic>;
-                final loggedInUser = AuthApiModel.fromJson(data);
-                if (response.data['token'] != null) {
-                _apiClient.setAuthToken(response.data['token']);
-
-            // Save token to storage for later use
-            final token = response.data['token'] as String;
-            await _tokenService.saveToken(token);
-          return loggedInUser;
-        }}
-      }
-      throw Exception(response.data['message'] ?? 'Login failed');
-    } catch (e) {
-      throw Exception('Login failed: ${e.toString()}');
-    }
-  }
+                final responseData = response.data['data'] as Map<String, dynamic>;
+                final token = responseData['token'] as String;
+                final userData = responseData['user'] as Map<String, dynamic>;
+                
+                final loggedInUser = AuthApiModel.fromJson(userData);
+                
+                _apiClient.setAuthToken(token);
+                await _tokenService.saveToken(token);
+                
+                return loggedInUser;
+              }
+            }
+            throw Exception(response.data['message'] ?? 'Login failed');
+          } catch (e) {
+            throw Exception('Login failed: ${e.toString()}');
+          }
+        }
 
   @override
   Future<AuthApiModel> getCurrentUser() async {

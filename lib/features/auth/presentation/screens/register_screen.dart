@@ -68,15 +68,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   void _goToStep2() {
-    final name = _nameController.text.trim();
+    final fullName = _nameController.text.trim();
     final email = _emailController.text.trim();
     final vm = ref.read(authViewModelProvider.notifier);
-    vm.validateField('name', name);
+    vm.validateField('fullName', fullName);
     vm.validateField('email', email);
 
     final state = ref.read(authViewModelProvider);
     if (state is AuthFormState) {
-      if (state.fieldErrors['name'] != null ||
+      if (state.fieldErrors['fullName'] != null ||
           state.fieldErrors['email'] != null) {
         return;
       }
@@ -92,26 +92,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   void _handleRegister() {
-    final phone = _phoneController.text.trim();
+    final phoneNumber = _phoneController.text.trim();
     final password = _passwordController.text.trim();
     final vm = ref.read(authViewModelProvider.notifier);
-    vm.validateField('phone', phone);
+    vm.validateField('phoneNumber', phoneNumber);
     vm.validateField('password', password);
 
     final state = ref.read(authViewModelProvider);
     if (state is AuthFormState) {
-      if (state.fieldErrors['phone'] != null ||
+      if (state.fieldErrors['phoneNumber'] != null ||
           state.fieldErrors['password'] != null) {
         return;
       }
     }
 
-    vm.register(
-      _nameController.text.trim(),
-      _emailController.text.trim(),
-      _phoneController.text.trim(),
-      _passwordController.text.trim(),
-    );
+    final fullName = _nameController.text.trim();
+    final email = _emailController.text.trim();
+
+    vm.register(fullName, email, phoneNumber, password);
   }
 
   @override
@@ -239,7 +237,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                       _currentStep == 0
                                           ? 'Create Your\nAccount'
                                           : 'Almost\nThere',
-                                      style: AppTextStyles.authTitle.copyWith(
+                                      style: AppTextStyles.h1.copyWith(
                                         color: const Color(0xFF1A1A1A),
                                       ),
                                     ),
@@ -248,11 +246,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                       _currentStep == 0
                                           ? 'Start with your name and email.'
                                           : 'Add your phone and set a password.',
-                                      style: AppTextStyles.authSubtitle
-                                          .copyWith(
-                                            color: const Color(0xFF999999),
-                                          ),
+                                      style: AppTextStyles.bodyLarge.copyWith(
+                                        color: const Color(0xFF999999),
+                                      ),
                                     ),
+
                                   ],
                                 ),
                               ),
@@ -440,11 +438,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           icon: Icons.person_outline_rounded,
           controller: _nameController,
           errorText: authState is AuthFormState
-              ? authState.fieldErrors['name']
+              ? authState.fieldErrors['fullName']
               : null,
           onChanged: (val) => ref
               .read(authViewModelProvider.notifier)
-              .validateField('name', val),
+              .validateField('fullName', val),
         ),
         const SizedBox(height: 18),
         TrailInputField(
@@ -480,11 +478,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           controller: _phoneController,
           keyboardType: TextInputType.phone,
           errorText: authState is AuthFormState
-              ? authState.fieldErrors['phone']
+              ? authState.fieldErrors['phoneNumber']
               : null,
           onChanged: (val) => ref
               .read(authViewModelProvider.notifier)
-              .validateField('phone', val),
+              .validateField('phoneNumber', val),
         ),
         const SizedBox(height: 18),
         TrailInputField(

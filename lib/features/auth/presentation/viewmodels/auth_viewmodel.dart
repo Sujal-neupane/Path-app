@@ -123,7 +123,7 @@ class AuthViewModel extends Notifier<AuthState> {
 
     switch (fieldName) {
       case 'email':
-        final emailRegex = RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$');
+        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
         if (!emailRegex.hasMatch(value.trim())) {
           return 'Invalid email address';
         }
@@ -133,12 +133,12 @@ class AuthViewModel extends Notifier<AuthState> {
           return 'Password too short (min 6 characters)';
         }
         break;
-      case 'name':
+      case 'fullName':
         if (value.trim().length < 2) {
           return 'Name too short';
         }
         break;
-      case 'phone':
+      case 'phoneNumber':
         if (value.trim().length < 7) {
           return 'Invalid phone number';
         }

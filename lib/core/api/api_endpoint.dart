@@ -12,7 +12,7 @@ class ApiEndpoints {
     if (apiBaseUrlOverride.isNotEmpty) {
       return apiBaseUrlOverride;
     }
-    return 'https://localhost:5999'; // Default base URL
+    return 'http://127.0.0.1:5999'; // Use 127.0.0.1 for local backend
   }
 
   static const Duration connectionTimeout = Duration(seconds: 15);
