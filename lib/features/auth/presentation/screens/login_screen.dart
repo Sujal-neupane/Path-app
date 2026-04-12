@@ -9,6 +9,7 @@ import 'package:path_app/features/auth/presentation/widgets/trail_input_field.da
 import 'package:path_app/features/auth/presentation/widgets/summit_button.dart';
 import 'package:path_app/features/auth/presentation/widgets/social_login_row.dart';
 import 'package:path_app/features/auth/presentation/screens/register_screen.dart';
+import 'package:path_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -85,7 +86,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     ref.read(authViewModelProvider.notifier).login(
           _emailController.text.trim(),
           _passwordController.text.trim(),
-        );
+        ).then((_) {
+          if (ref.read(authViewModelProvider) is AuthSuccess) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const DashboardScreen()),
+              (route) => false,
+            );
+          }
+        });
   }
 
   void _navigateToRegister() {

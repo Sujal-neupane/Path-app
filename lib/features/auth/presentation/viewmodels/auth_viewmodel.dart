@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:path_app/features/auth/presentation/state/auth_state.dart';
+import 'package:path_app/features/dashboard/presentation/screens/dashboard_screen.dart'; // Added for navigation
+import 'package:flutter/material.dart'; // Added for context/navigation
 
 final authViewModelProvider = NotifierProvider<AuthViewModel, AuthState>(() {
   return AuthViewModel();
