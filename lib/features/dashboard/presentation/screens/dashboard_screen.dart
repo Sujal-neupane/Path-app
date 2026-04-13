@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_app/core/gamification/gamification_widgets.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/features/dashboard/domain/entities/dashboard_overview.dart';
 import 'package:path_app/features/dashboard/presentation/viewmodels/dashboard_viewmodel.dart';
 
-/// Premium Dashboard Screen with:
-/// - Glassmorphism effects & visual depth
-/// - Animated card entrances
-/// - Multiple sections (routes, tasks from server)
-/// - Better color harmony and typography
-/// - Smooth micro-interactions
+/// Clean, minimal dashboard following UX Laws
+/// - Hick's Law: 5-7 choices per screen ✓
+/// - Fitts's Law: Large buttons for critical actions ✓  
+/// - Jakob's Law: Standard patterns (bottom nav, header) ✓
+/// - Prägnanz: Simple, clear, white-based design ✓
+/// - Miller's Law: 5-7 items max per chunk ✓
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -205,21 +204,32 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
+          // Header: Greeting + Location + Profile
           _buildHeader(overview.header),
-          _buildStreakAndMotivationSection(),
+          
+          // Active Expedition: Core trek info
           _buildExpeditionHero(overview.expedition),
-          _buildAchievementsShowcase(),
+          
+          // Live Status: Simple indicator
           _buildLiveStatusIndicator(),
+          
+          // Quick Actions: 3 essential buttons (Hick's Law)
           _buildQuickActionsSection(),
+          
           _buildSectionDivider(),
+          
+          // Essential Metrics: 2-3 cards max (Miller's Law)
           _buildSectionTitle('Essential Metrics', 'Your trek at a glance'),
           _buildInsightsGrid(overview.insights),
+          
+          // What's Next: Checkpoint
           _buildSectionTitle('What\'s Next', 'Stay on track'),
           _buildNextCheckpointCard(overview.nextCheckpoint),
-          _buildSectionTitle('Today\'s Focus', 'Execute with clarity'),
+          
+          // Tasks: Today's focus
+          _buildSectionTitle('Today\'s Tasks', 'Execute with clarity'),
           _buildTasksWidget(overview.tasks),
-          _buildSectionTitle('Upcoming Routes', 'Your roadmap ahead'),
-          _buildRoutesSection(),
+          
           const SliverPadding(
             padding: EdgeInsets.only(bottom: 140),
             sliver: SliverToBoxAdapter(child: SizedBox.shrink()),
@@ -332,46 +342,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  /// Gamification section: Shows streak badge + motivational message
-  Widget _buildStreakAndMotivationSection() {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      sliver: SliverToBoxAdapter(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Streak indicator with shadow
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const StreakIndicator(),
-            ),
-            const SizedBox(height: 12),
-            // Motivational message from gamification service
-            const MotivationalMessage(),
-          ],
-        ),
-      ),
-    );
-  }
 
-  /// Achievements showcase section: Grid of unlocked badges
-  Widget _buildAchievementsShowcase() {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      sliver: SliverToBoxAdapter(
-        child: const AchievementsGrid(maxDisplay: 4),
-      ),
-    );
-  }
 
   Widget _buildExpeditionHero(ExpeditionSummary expedition) {
     return SliverPadding(
@@ -1055,166 +1026,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildRoutesSection() {
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      sliver: SliverToBoxAdapter(
-        child: Column(
-          children: [
-            _buildRouteCard(
-              title: 'Manali-Leh Highway',
-              distance: '473 km',
-              difficulty: 'Expert',
-              estimatedDays: '10–12 days',
-              icon: Icons.directions_walk_rounded,
-              color: LightColors.sosRed,
-            ),
-            const SizedBox(height: 11),
-            _buildRouteCard(
-              title: 'Everest Base Camp',
-              distance: '65 km',
-              difficulty: 'Advanced',
-              estimatedDays: '12–14 days',
-              icon: Icons.terrain_rounded,
-              color: LightColors.peakAmber,
-            ),
-            const SizedBox(height: 11),
-            _buildRouteCard(
-              title: 'Annapurna Circuit',
-              distance: '160 km',
-              difficulty: 'Intermediate',
-              estimatedDays: '7–8 days',
-              icon: Icons.landscape_rounded,
-              color: LightColors.trailGreen,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRouteCard({
-    required String title,
-    required String distance,
-    required String difficulty,
-    required String estimatedDays,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {},
-        borderRadius: BorderRadius.circular(18),
-        splashColor: color.withValues(alpha: 0.08),
-        child: _buildGlassmorphicCard(
-          borderColor: color.withValues(alpha: 0.18),
-          child: Row(
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: color.withValues(alpha: 0.25)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, color: color, size: 26),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: LightColors.textPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          distance,
-                          style: AppTextStyles.caption.copyWith(
-                            color: LightColors.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                        Text(
-                          ' • ',
-                          style: AppTextStyles.caption.copyWith(
-                            color: LightColors.textSecondary,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.13),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: color.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Text(
-                            difficulty,
-                            style: AppTextStyles.caption.copyWith(
-                              color: color,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    estimatedDays,
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: LightColors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    'Duration',
-                    style: AppTextStyles.caption.copyWith(
-                      color: LightColors.textSecondary,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_rounded,
-                color: color.withValues(alpha: 0.4),
-                size: 21,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
