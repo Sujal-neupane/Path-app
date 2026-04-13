@@ -28,4 +28,7 @@ class ApiEndpoints {
   static const String resetPassword = '/auth/reset-password';
   static const String currentUser = '/auth/me';
 
+  // Dashboard Endpoints
+  static const String dashboardOverview = '/dashboard/overview';
+
 }

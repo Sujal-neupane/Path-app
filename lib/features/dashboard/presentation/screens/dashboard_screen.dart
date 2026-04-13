@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
 import 'package:path_app/core/theme/light_colors.dart';
+import 'package:path_app/features/dashboard/domain/entities/dashboard_overview.dart';
+import 'package:path_app/features/dashboard/presentation/viewmodels/dashboard_viewmodel.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -15,24 +17,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final overviewState = ref.watch(dashboardOverviewProvider);
+
     return Scaffold(
       backgroundColor: LightColors.stoneWhite,
       body: Stack(
         children: [
           SafeArea(
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                _buildHeader(),
-                _buildExpeditionHero(),
-                _buildSectionTitle('Essential Actions', 'One tap access to what matters now'),
-                _buildActionRow(),
-                _buildSectionTitle('Live Overview', 'Real-time decisions for safer trekking'),
-                _buildOverviewCards(),
-                _buildSectionTitle('Up Next', 'Your next checkpoint at a glance'),
-                _buildNextCheckpointCard(),
-                const SliverToBoxAdapter(child: SizedBox(height: 118)),
-              ],
+            child: overviewState.when(
+              loading: _buildLoading,
+              error: (error, _) => _buildError(error.toString()),
+              data: (overview) => RefreshIndicator(
+                color: LightColors.forestPrimary,
+                onRefresh: () async => ref.refresh(dashboardOverviewProvider.future),
+                child: _buildContent(overview),
+              ),
             ),
           ),
           _buildBottomNav(),
@@ -41,7 +40,76 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildLoading() {
+    return const Center(
+      child: CircularProgressIndicator(
+        color: LightColors.forestPrimary,
+      ),
+    );
+  }
+
+  Widget _buildError(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: LightColors.surfaceWhite,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.07)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded, color: LightColors.sosRed, size: 28),
+              const SizedBox(height: 10),
+              Text(
+                'Unable to load dashboard',
+                style: AppTextStyles.h3.copyWith(color: LightColors.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.caption.copyWith(color: LightColors.textSecondary),
+              ),
+              const SizedBox(height: 14),
+              FilledButton(
+                onPressed: () => ref.invalidate(dashboardOverviewProvider),
+                style: FilledButton.styleFrom(
+                  backgroundColor: LightColors.forestPrimary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(DashboardOverview overview) {
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        _buildHeader(overview.header),
+        _buildExpeditionHero(overview.expedition),
+        _buildSectionTitle('Essential Actions', 'One tap access to what matters now'),
+        _buildActionRow(),
+        _buildSectionTitle('Live Overview', 'Real-time decisions for safer trekking'),
+        _buildOverviewCards(overview.insights),
+        _buildSectionTitle('Up Next', 'Your next checkpoint at a glance'),
+        _buildNextCheckpointCard(overview.nextCheckpoint),
+        _buildSectionTitle('Today Tasks', 'Focused execution with clear next steps'),
+        _buildTaskList(overview.tasks),
+        const SliverToBoxAdapter(child: SizedBox(height: 118)),
+      ],
+    );
+  }
+
+  Widget _buildHeader(DashboardHeader header) {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
       sliver: SliverToBoxAdapter(
@@ -52,7 +120,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'SATURDAY, APRIL 12',
+                    header.dateLabel,
                     style: AppTextStyles.caption.copyWith(
                       color: LightColors.textSecondary,
                       letterSpacing: 1.4,
@@ -61,16 +129,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Journey Dashboard',
+                    header.greeting,
                     style: AppTextStyles.h1.copyWith(
                       color: LightColors.textPrimary,
-                      fontSize: 36,
+                      fontSize: 32,
                       height: 1,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Namche Bazaar • Everest Region',
+                    header.location,
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: LightColors.textSecondary,
                     ),
@@ -94,7 +162,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildExpeditionHero() {
+  Widget _buildExpeditionHero(ExpeditionSummary expedition) {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 4),
       sliver: SliverToBoxAdapter(
@@ -127,7 +195,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ),
                     const Spacer(),
-                    _heroBadge('Sync OK'),
+                    _heroBadge(expedition.statusTag),
                   ],
                 ),
               ),
@@ -137,14 +205,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Everest Base Camp',
+                      expedition.title,
                       style: AppTextStyles.h2.copyWith(
                         color: LightColors.textPrimary,
                         fontSize: 29,
                       ),
                     ),
                     Text(
-                      'Day 05 • Namche to Tengboche',
+                      expedition.subtitle,
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: LightColors.textSecondary,
                       ),
@@ -152,10 +220,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     const SizedBox(height: 14),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        _HeroMetric(label: 'Distance', value: '11.2 km'),
-                        _HeroMetric(label: 'Ascent', value: '+780 m'),
-                        _HeroMetric(label: 'ETA', value: '5h 20m'),
+                      children: [
+                        _HeroMetric(label: 'Distance', value: expedition.distance),
+                        _HeroMetric(label: 'Ascent', value: expedition.ascent),
+                        _HeroMetric(label: 'ETA', value: expedition.eta),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -163,14 +231,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       borderRadius: BorderRadius.circular(999),
                       child: LinearProgressIndicator(
                         minHeight: 9,
-                        value: 0.62,
+                        value: expedition.progress,
                         color: LightColors.forestPrimary,
                         backgroundColor: LightColors.meadowTint.withValues(alpha: 0.45),
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '62% completed today',
+                      '${(expedition.progress * 100).round()}% completed today',
                       style: AppTextStyles.caption.copyWith(
                         color: LightColors.forestPrimary,
                         fontWeight: FontWeight.w700,
@@ -302,56 +370,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildOverviewCards() {
+  Widget _buildOverviewCards(List<DashboardInsight> insights) {
+    final displayInsights = insights.take(2).toList();
+
+    if (displayInsights.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
       sliver: SliverToBoxAdapter(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final bool compact = constraints.maxWidth < 680;
-            if (compact) {
+            if (compact || displayInsights.length == 1) {
               return Column(
                 children: [
-                  _overviewCard(
-                    'Summit Readiness',
-                    '84%',
-                    'Excellent pacing and acclimatization trend',
-                    Icons.insights_rounded,
-                    LightColors.forestPrimary,
-                  ),
-                  const SizedBox(height: 10),
-                  _overviewCard(
-                    'Weather Window',
-                    '14:30 - 17:00',
-                    'Safer crossing visibility expected',
-                    Icons.wb_cloudy_outlined,
-                    LightColors.altitudeBlue,
-                  ),
+                  for (int i = 0; i < displayInsights.length; i++) ...[
+                    _overviewCard(displayInsights[i]),
+                    if (i != displayInsights.length - 1) const SizedBox(height: 10),
+                  ],
                 ],
               );
             }
 
             return Row(
               children: [
-                Expanded(
-                  child: _overviewCard(
-                    'Summit Readiness',
-                    '84%',
-                    'Excellent pacing and acclimatization trend',
-                    Icons.insights_rounded,
-                    LightColors.forestPrimary,
-                  ),
-                ),
+                Expanded(child: _overviewCard(displayInsights[0])),
                 const SizedBox(width: 10),
-                Expanded(
-                  child: _overviewCard(
-                    'Weather Window',
-                    '14:30 - 17:00',
-                    'Safer crossing visibility expected',
-                    Icons.wb_cloudy_outlined,
-                    LightColors.altitudeBlue,
-                  ),
-                ),
+                Expanded(child: _overviewCard(displayInsights[1])),
               ],
             );
           },
@@ -360,7 +407,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _overviewCard(String title, String value, String hint, IconData icon, Color accent) {
+  Widget _overviewCard(DashboardInsight insight) {
+    final color = insight.type == 'weather' ? LightColors.altitudeBlue : LightColors.forestPrimary;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -376,14 +425,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: accent, size: 18),
+                child: Icon(
+                  insight.type == 'weather' ? Icons.wb_cloudy_outlined : Icons.insights_rounded,
+                  color: color,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 8),
               Text(
-                title,
+                insight.title,
                 style: AppTextStyles.caption.copyWith(
                   color: LightColors.textSecondary,
                   fontWeight: FontWeight.w700,
@@ -393,7 +446,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            value,
+            insight.value,
             style: AppTextStyles.h2.copyWith(
               color: LightColors.textPrimary,
               fontSize: 30,
@@ -401,7 +454,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
           Text(
-            hint,
+            insight.hint,
             style: AppTextStyles.caption.copyWith(
               color: LightColors.textSecondary,
             ),
@@ -411,7 +464,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildNextCheckpointCard() {
+  Widget _buildNextCheckpointCard(DashboardCheckpoint checkpoint) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
       sliver: SliverToBoxAdapter(
@@ -433,7 +486,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '3',
+                  '${checkpoint.order}',
                   style: AppTextStyles.button.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -446,14 +499,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Checkpoint 3: Phunki Thenga Bridge',
+                      checkpoint.title,
                       style: AppTextStyles.bodyLarge.copyWith(
                         color: LightColors.textPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
-                      'ETA 09:20 • Water refill and pulse scan',
+                      checkpoint.detail,
                       style: AppTextStyles.caption.copyWith(
                         color: LightColors.textSecondary,
                       ),
@@ -462,6 +515,71 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
               Icon(Icons.chevron_right_rounded, color: LightColors.textSecondary.withValues(alpha: 0.7)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskList(List<DashboardTask> tasks) {
+    if (tasks.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      sliver: SliverToBoxAdapter(
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: LightColors.surfaceWhite,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+          ),
+          child: Column(
+            children: [
+              for (final task in tasks)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: task.done ? LightColors.forestPrimary : Colors.transparent,
+                          border: Border.all(color: LightColors.forestPrimary.withValues(alpha: 0.45), width: 1.4),
+                        ),
+                        child: task.done
+                            ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              task.title,
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                color: LightColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              task.meta,
+                              style: AppTextStyles.caption.copyWith(
+                                color: LightColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
