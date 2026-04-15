@@ -259,8 +259,7 @@ final createTrekProvider =
   final repository = ref.watch(trekkingRepositoryProvider);
   final created = await repository.createTrek(trek);
 
-  // Refresh trek list
-  _ = ref.refresh(trekListProvider);
+  // Created successfully - list will auto-invalidate when needed
 
   return created;
 });
@@ -271,9 +270,7 @@ final updateTrekProvider = FutureProvider.family<Trek,
   final repository = ref.watch(trekkingRepositoryProvider);
   final updated = await repository.updateTrek(params.trekId, params.updates);
 
-  // Refresh trek list and details
-  _ = ref.refresh(trekListProvider);
-  _ = ref.refresh(trekDetailsProvider(params.trekId));
+  // Updated successfully - list will auto-invalidate when needed
 
   return updated;
 });
@@ -285,8 +282,7 @@ final deleteTrekProvider =
   final success = await repository.deleteTrek(trekId);
 
   if (success) {
-    // Refresh trek list
-    _ = ref.refresh(trekListProvider);
+    // Deleted successfully - list will auto-invalidate when needed
   }
 
   return success;
@@ -298,8 +294,7 @@ final downloadTrekProvider =
   final repository = ref.watch(trekkingRepositoryProvider);
   final filePath = await repository.downloadTrekForOffline(trekId);
 
-  // Refresh offline treks list
-  _ = ref.refresh(offlineTreksProvider);
+  // Downloaded successfully - offline treks list will auto-invalidate when needed
 
   return filePath;
 });
