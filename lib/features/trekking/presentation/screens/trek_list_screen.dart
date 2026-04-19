@@ -4,6 +4,7 @@ import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
 import '../viewmodels/trekking_providers.dart';
 import '../widgets/trek_card.dart';
+import 'trek_details_screen.dart';
 
 /// World-class trek discovery: Minimalist, aesthetic, zero visual clutter
 class TrekListScreen extends ConsumerStatefulWidget {
@@ -228,11 +229,10 @@ class _TrekListScreenState extends ConsumerState<TrekListScreen> {
                                   child: TrekCard(
                                     trek: trek,
                                     onTap: () {
-                                      // TODO: Navigate to TrekDetailsScreen
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Selected: ${trek.name}'),
-                                          behavior: SnackBarBehavior.floating,
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => TrekDetailsScreen(trek: trek),
                                         ),
                                       );
                                     },
