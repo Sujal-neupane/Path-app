@@ -13,7 +13,7 @@ import 'trekking_remote_datasource.dart';
 /// - [ServerException] for 4xx/5xx responses
 class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
   final Dio _dio;
-  static const String _baseUrl = '/api/v1';
+  static const String _baseUrl = '';
 
   TrekkingRemoteDataSourceImpl({required Dio dio}) : _dio = dio;
 
@@ -27,9 +27,11 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
     try {
       final queryParams = {
         'page': page,
-        'pageSize': pageSize,
-        if (locationFilter != null) 'location': locationFilter,
-        if (difficultyFilter != null) 'difficulty': difficultyFilter,
+        'limit': pageSize,
+        if (locationFilter != null && locationFilter.isNotEmpty)
+          'region': locationFilter,
+        if (difficultyFilter != null && difficultyFilter.isNotEmpty)
+          'difficulty': difficultyFilter,
       };
 
       final response = await _dio.get(
@@ -44,8 +46,21 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
         );
       }
 
-      final data = TrekListApiResponse.fromJson(response.data);
-      return data;
+      final body = response.data as Map<String, dynamic>;
+      final items = (body['data'] as List<dynamic>? ?? const [])
+          .map((item) => TrekApiModel.fromJson(_mapBackendTrek(item as Map<String, dynamic>)))
+          .toList();
+
+      final meta = (body['meta'] as Map<String, dynamic>? ?? const {});
+
+      return TrekListApiResponse(
+        success: body['success'] == true,
+        data: items,
+        total: (meta['total'] as num?)?.toInt() ?? items.length,
+        page: (meta['page'] as num?)?.toInt() ?? page,
+        pageSize: (meta['limit'] as num?)?.toInt() ?? pageSize,
+        totalPages: (meta['totalPages'] as num?)?.toInt() ?? 1,
+      );
     } on DioException catch (e) {
       throw _handleDioException(e, 'Failed to fetch treks');
     } catch (e) {
@@ -68,7 +83,9 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
         );
       }
 
-      final trekModel = TrekApiModel.fromJson(response.data['data']);
+      final trekModel = TrekApiModel.fromJson(
+        _mapBackendTrek(response.data['data'] as Map<String, dynamic>),
+      );
       return trekModel;
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
@@ -101,7 +118,9 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
         );
       }
 
-      final createdTrek = TrekApiModel.fromJson(response.data['data']);
+      final createdTrek = TrekApiModel.fromJson(
+        _mapBackendTrek(response.data['data'] as Map<String, dynamic>),
+      );
       return createdTrek;
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
@@ -138,7 +157,9 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
         );
       }
 
-      final updatedTrek = TrekApiModel.fromJson(response.data['data']);
+      final updatedTrek = TrekApiModel.fromJson(
+        _mapBackendTrek(response.data['data'] as Map<String, dynamic>),
+      );
       return updatedTrek;
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
@@ -209,8 +230,8 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
         return [];
       }
 
-      final results = (response.data['data'] as List?)
-              ?.map((item) => TrekApiModel.fromJson(item))
+            final results = (response.data['data'] as List?)
+              ?.map((item) => TrekApiModel.fromJson(_mapBackendTrek(item as Map<String, dynamic>)))
               .toList() ??
           [];
       return results;
@@ -231,9 +252,9 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
   }) async {
     try {
       final queryParams = {
-        if (difficulty != null) 'difficulty': difficulty,
+        if (difficulty != null && difficulty.isNotEmpty) 'difficulty': difficulty,
         if (maxDays != null) 'maxDays': maxDays,
-        if (season != null) 'season': season,
+        if (season != null && season.isNotEmpty) 'season': season,
       };
 
       final response = await _dio.get(
@@ -245,8 +266,8 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
         return [];
       }
 
-      final results = (response.data['data'] as List?)
-              ?.map((item) => TrekApiModel.fromJson(item))
+            final results = (response.data['data'] as List?)
+              ?.map((item) => TrekApiModel.fromJson(_mapBackendTrek(item as Map<String, dynamic>)))
               .toList() ??
           [];
       return results;
@@ -307,5 +328,44 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
     }
 
     return ConnectionLostException();
+  }
+
+  Map<String, dynamic> _mapBackendTrek(Map<String, dynamic> raw) {
+    final checkpoints = (raw['checkpoints'] as List<dynamic>? ?? const []);
+    final maxAltitude = checkpoints.fold<double>(
+      0,
+      (previousValue, item) {
+        final altitude = ((item as Map<String, dynamic>)['altitude_m'] as num?)?.toDouble() ?? 0;
+        return altitude > previousValue ? altitude : previousValue;
+      },
+    );
+
+    final startDate = DateTime.tryParse((raw['start_date'] ?? '').toString());
+    final endDate = DateTime.tryParse((raw['end_date'] ?? '').toString());
+    final estimatedDays =
+        (startDate != null && endDate != null) ? endDate.difference(startDate).inDays.abs() + 1 : 1;
+
+    return {
+      '_id': (raw['id'] ?? raw['_id'] ?? '').toString(),
+      'name': (raw['title'] ?? 'Untitled Trek').toString(),
+      'location': (raw['region'] ?? 'Unknown').toString(),
+      'description': (raw['notes'] ?? '').toString(),
+      'totalDistance': ((raw['expected_distance_km'] as num?) ?? 0).toDouble(),
+      'totalElevationGain': ((raw['expected_elevation_gain_m'] as num?) ?? 0).toDouble(),
+      'maxAltitude': maxAltitude,
+      'estimatedDays': estimatedDays,
+      'difficultyRating': (raw['difficulty'] ?? 'moderate').toString(),
+      'bestSeason': 'spring',
+      'routePoints': <Map<String, dynamic>>[],
+      // Reuse this field for cover image until dedicated image fields are added across the Flutter domain model.
+      'routeDataPath': raw['cover_image_url'],
+      'permitsRequired': null,
+      'createdAt': (raw['createdAt'] ?? DateTime.now().toIso8601String()).toString(),
+      'updatedAt': (raw['updatedAt'] ?? DateTime.now().toIso8601String()).toString(),
+      'createdBy': (raw['user_id'] ?? 'system').toString(),
+      'isOfficial': (raw['is_official'] as bool?) ?? false,
+      'completionCount': 0,
+      'averageRating': 0.0,
+    };
   }
 }

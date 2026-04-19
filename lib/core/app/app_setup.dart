@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_app/core/cache/secure_cache_service.dart';
 import 'package:path_app/core/gamification/achievement_service.dart';
 
 /// Application initialization service
 /// Runs on app startup to setup all core services
 class AppSetup {
+  /// Store SharedPreferences instance for access by providers
+  static SharedPreferences? _sharedPreferences;
+
+  /// Get the initialized SharedPreferences instance
+  static SharedPreferences get sharedPreferences {
+    if (_sharedPreferences == null) {
+      throw UnimplementedError('SharedPreferences not yet initialized');
+    }
+    return _sharedPreferences!;
+  }
   /// Initialize all core services
   ///
   /// Runs once at app startup and sets up:
+  /// - SharedPreferences (local storage)
   /// - Cache layer (offline-first)
   /// - Gamification (achievements, streaks)  
   /// - Analytics (optional)
@@ -16,6 +28,10 @@ class AppSetup {
 
     try {
       debugPrint('▶️ Starting app initialization...');
+
+      // 0. Initialize SharedPreferences
+      await _initializeSharedPreferences();
+      debugPrint('✅ SharedPreferences initialized');
 
       // 1. Initialize cache service
       await _initializeCacheService();
@@ -29,6 +45,17 @@ class AppSetup {
     } catch (e) {
       debugPrint('❌ Initialization error: $e');
       // Gracefully degrade - app still works with limited features
+      rethrow;
+    }
+  }
+
+  /// Initialize SharedPreferences for persistent local storage
+  static Future<void> _initializeSharedPreferences() async {
+    try {
+      _sharedPreferences = await SharedPreferences.getInstance();
+      debugPrint('✔️ SharedPreferences ready');
+    } catch (e) {
+      debugPrint('❌ SharedPreferences initialization failed: $e');
       rethrow;
     }
   }

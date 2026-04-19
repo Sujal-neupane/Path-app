@@ -1,6 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_app/features/trekking/data/datasources/itinerary_local_datasource.dart';
 import 'package:path_app/features/trekking/data/datasources/itinerary_local_datasource_impl.dart';
 import 'package:path_app/features/trekking/data/datasources/itinerary_remote_datasource.dart';
@@ -8,37 +6,31 @@ import 'package:path_app/features/trekking/data/datasources/itinerary_remote_dat
 import 'package:path_app/features/trekking/data/repositories/itinerary_repository_impl.dart';
 import 'package:path_app/features/trekking/domain/entities/itinerary.dart';
 import 'package:path_app/features/trekking/domain/repositories/itinerary_repository.dart';
+import 'package:path_app/features/trekking/presentation/viewmodels/trekking_providers.dart';
 
 /// ═══════════════════════════════════════════════════════════════════════
 /// Layer 1: Dependency Injection - Infrastructure
 /// ═══════════════════════════════════════════════════════════════════════
 
-/// Reuse existing SharedPreferences provider (from trekking_providers)
-/// Import from there when combining providers
-
-// Reuse existing Dio provider (from trekking_providers)
-// Import from there when combining providers
+/// Dio and SharedPreferences are provided by trekking_providers
+/// Import them from there when needed
 
 /// ═══════════════════════════════════════════════════════════════════════
 /// Layer 2: Datasources
 /// ═══════════════════════════════════════════════════════════════════════
 
 /// Remote datasource for itinerary API calls
+/// Reuses the shared Dio provider from trekking_providers for consistency
 final itineraryRemoteDataSourceProvider =
     Provider<ItineraryRemoteDataSource>((ref) {
-  // In real app, would inject Dio from trekking_providers
-  // For now, create mock Dio
-  final dio = Dio(BaseOptions(
-    baseUrl: 'http://localhost:3000',
-    connectTimeout: const Duration(seconds: 30),
-  ));
-
+  final dio = ref.watch(dioProvider);
   return ItineraryRemoteDataSourceImpl(dio: dio);
 });
 
 /// Local datasource for caching
-final itineraryLocalDataSourceProvider = FutureProvider<ItineraryLocalDataSource>((ref) async {
-  final prefs = await SharedPreferences.getInstance();
+/// Uses the shared sharedPreferencesProvider from trekking_providers
+final itineraryLocalDataSourceProvider = Provider<ItineraryLocalDataSource>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
   return ItineraryLocalDataSourceImpl(prefs: prefs);
 });
 
@@ -47,15 +39,14 @@ final itineraryLocalDataSourceProvider = FutureProvider<ItineraryLocalDataSource
 /// ═══════════════════════════════════════════════════════════════════════
 
 /// Main repository - handles offline-first logic
+/// Uses shared providers from trekking_providers for consistency
 final itineraryRepositoryProvider = Provider<ItineraryRepository>((ref) {
   final remoteDataSource = ref.watch(itineraryRemoteDataSourceProvider);
+  final localDataSource = ref.watch(itineraryLocalDataSourceProvider);
 
-  // For local datasource, handle async initialization
   return ItineraryRepositoryImpl(
     remoteDataSource: remoteDataSource,
-    localDataSource: ItineraryLocalDataSourceImpl(
-      prefs: SharedPreferences.getInstance as SharedPreferences,
-    ),
+    localDataSource: localDataSource,
   );
 });
 

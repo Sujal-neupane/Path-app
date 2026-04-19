@@ -8,7 +8,7 @@ import 'package:path_app/features/auth/presentation/widgets/trail_input_field.da
 import 'package:path_app/features/auth/presentation/widgets/summit_button.dart';
 import 'package:path_app/features/auth/presentation/widgets/password_strength_indicator.dart';
 import 'package:path_app/features/auth/presentation/widgets/auth_hero_section.dart';
-import 'package:path_app/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:path_app/features/trekking/presentation/screens/main_navigation_shell.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -113,7 +113,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     vm.register(fullName, email, phoneNumber, password).then((_) {
       if (ref.read(authViewModelProvider) is AuthSuccess) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          MaterialPageRoute(
+            builder: (context) => const MainNavigationShell(),
+          ),
           (route) => false,
         );
       }

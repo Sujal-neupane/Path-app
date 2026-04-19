@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:path_app/core/app/app_setup.dart';
+import 'package:path_app/core/api/api_endpoint.dart';
 import 'package:path_app/features/trekking/data/datasources/trekking_local_datasource.dart';
 import 'package:path_app/features/trekking/data/datasources/trekking_local_datasource_impl.dart';
 import 'package:path_app/features/trekking/data/datasources/trekking_remote_datasource.dart';
@@ -9,26 +11,41 @@ import 'package:path_app/features/trekking/data/repositories/trekking_repository
 import 'package:path_app/features/trekking/domain/entities/trek.dart';
 import 'package:path_app/features/trekking/domain/repositories/trekking_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:state_notifier/state_notifier.dart';
 
 /// ═══════════════════════════════════════════════════════════════════════
 /// Layer 1: Dependency Injection
 /// ═══════════════════════════════════════════════════════════════════════
 
 /// Provides SharedPreferences instance
+/// Initialized by AppSetup.initialize() in main.dart
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  // This should be initialized in main.dart
-  // For now, return mock - will throw if not set up
-  throw UnimplementedError('SharedPreferences not initialized');
+  return AppSetup.sharedPreferences;
 });
 
 /// Provides Dio HTTP client instance
+/// Configure baseUrl to point to your backend server
+/// For development, use your machine's IP (e.g., http://192.168.x.x:3000)
 final dioProvider = Provider<Dio>((ref) {
-  // This should be initialized in main.dart with proper interceptors
   final dio = Dio();
-  dio.options.baseUrl = 'http://localhost:3000'; // TODO: Use env config
-  dio.options.connectTimeout = const Duration(seconds: 30);
-  dio.options.receiveTimeout = const Duration(seconds: 30);
+  // Keep feature calls aligned with the shared API endpoint config.
+  final baseUrl = ApiEndpoints.baseUrl;
+
+  dio.options.baseUrl = baseUrl;
+  dio.options.connectTimeout = const Duration(seconds: 5);
+  dio.options.receiveTimeout = const Duration(seconds: 5);
+
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        final token = AppSetup.sharedPreferences.getString('auth_token');
+        if (token != null && token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
+    ),
+  );
+
   return dio;
 });
 

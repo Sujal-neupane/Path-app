@@ -243,13 +243,10 @@ class DashboardFetchException extends DashboardException {
   final bool isNetworkError;
 
   DashboardFetchException({
-    required String message,
+    required super.message,
     this.isNetworkError = false,
-    int? statusCode,
-  }) : super(
-          message: message,
-          statusCode: statusCode,
-        );
+    super.statusCode,
+  });
 
   @override
   String getUserMessage() {

@@ -260,8 +260,8 @@ class ItineraryRemoteDataSourceImpl implements ItineraryRemoteDataSource {
   }) async {
     try {
       final queryParams = <String, dynamic>{
-        if (query != null) 'q': query,
-        if (difficultyFilter != null) 'difficulty': difficultyFilter,
+        'q': ?query,
+        'difficulty': ?difficultyFilter,
         if (afterDate != null) 'after': afterDate.toIso8601String(),
       };
 
