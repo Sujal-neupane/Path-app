@@ -5,17 +5,7 @@ import 'package:path_app/core/theme/app_text_styles.dart';
 import '../viewmodels/trekking_providers.dart';
 import '../widgets/trek_card.dart';
 
-/// Browse all available treks (Treks tab)
-///
-/// Features:
-/// - Search by name/location
-/// - Filter by difficulty, season, days
-/// - Offline indicator
-/// - Tap card → TrekDetailsScreen
-/// - Long press → Download offline
-///
-/// Grid layout, responsive (Fitts's Law: large touch targets)
-/// Uses offline-first caching (trekListProvider)
+/// World-class trek discovery: Minimalist, aesthetic, zero visual clutter
 class TrekListScreen extends ConsumerStatefulWidget {
   const TrekListScreen({super.key});
 
@@ -32,6 +22,7 @@ class _TrekListScreenState extends ConsumerState<TrekListScreen> {
     super.initState();
     _searchController = TextEditingController();
 
+    // Fetch treks on first load
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(trekListProvider.notifier).fetchTreks();
     });
@@ -52,9 +43,9 @@ class _TrekListScreenState extends ConsumerState<TrekListScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
+            // Minimal header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -62,7 +53,7 @@ class _TrekListScreenState extends ConsumerState<TrekListScreen> {
                     'Discover Treks',
                     style: AppTextStyles.h2.copyWith(
                       color: LightColors.textPrimary,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -70,15 +61,16 @@ class _TrekListScreenState extends ConsumerState<TrekListScreen> {
                     'Find your next adventure',
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: LightColors.textSecondary,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Search bar
+            // Search bar (Fitts's Law: large, accessible)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: TextField(
                 controller: _searchController,
                 onChanged: (query) {
@@ -135,70 +127,73 @@ class _TrekListScreenState extends ConsumerState<TrekListScreen> {
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
+                    horizontal: 12,
                     vertical: 12,
                   ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
-            // Filter chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  _FilterChip(
-                    label: 'All',
-                    isSelected: _difficultyFilter == null,
-                    onTap: () {
-                      setState(() => _difficultyFilter = null);
-                      ref.read(trekListProvider.notifier).fetchTreks();
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Easy',
-                    isSelected: _difficultyFilter == 'easy',
-                    color: Colors.green,
-                    onTap: () {
-                      setState(() => _difficultyFilter = 'easy');
-                      ref.read(trekListProvider.notifier).fetchTreks(
-                            difficultyFilter: 'easy',
-                          );
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Moderate',
-                    isSelected: _difficultyFilter == 'moderate',
-                    color: LightColors.peakAmber,
-                    onTap: () {
-                      setState(() => _difficultyFilter = 'moderate');
-                      ref.read(trekListProvider.notifier).fetchTreks(
-                            difficultyFilter: 'moderate',
-                          );
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Expert',
-                    isSelected: _difficultyFilter == 'expert',
-                    color: LightColors.sosRed,
-                    onTap: () {
-                      setState(() => _difficultyFilter = 'expert');
-                      ref.read(trekListProvider.notifier).fetchTreks(
-                            difficultyFilter: 'extreme',
-                          );
-                    },
-                  ),
-                ],
+            // Difficulty filters (Hick's Law: reduced choices)
+            SizedBox(
+              height: 36,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: [
+                    _DifficultyChip(
+                      label: 'All',
+                      isSelected: _difficultyFilter == null,
+                      onTap: () {
+                        setState(() => _difficultyFilter = null);
+                        ref.read(trekListProvider.notifier).fetchTreks();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _DifficultyChip(
+                      label: 'Easy',
+                      isSelected: _difficultyFilter == 'easy',
+                      color: Colors.green,
+                      onTap: () {
+                        setState(() => _difficultyFilter = 'easy');
+                        ref.read(trekListProvider.notifier).fetchTreks(
+                          difficultyFilter: 'easy',
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _DifficultyChip(
+                      label: 'Moderate',
+                      isSelected: _difficultyFilter == 'moderate',
+                      color: LightColors.peakAmber,
+                      onTap: () {
+                        setState(() => _difficultyFilter = 'moderate');
+                        ref.read(trekListProvider.notifier).fetchTreks(
+                          difficultyFilter: 'moderate',
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _DifficultyChip(
+                      label: 'Expert',
+                      isSelected: _difficultyFilter == 'extreme',
+                      color: LightColors.sosRed,
+                      onTap: () {
+                        setState(() => _difficultyFilter = 'extreme');
+                        ref.read(trekListProvider.notifier).fetchTreks(
+                          difficultyFilter: 'extreme',
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
             // Trek list
             Expanded(
@@ -209,65 +204,42 @@ class _TrekListScreenState extends ConsumerState<TrekListScreen> {
                       ),
                     )
                   : trekListState.error != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error_outline_rounded,
-                                size: 48,
-                                color: LightColors.sosRed,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Failed to load treks',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: LightColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              FilledButton(
-                                onPressed: () {
-                                  ref
-                                      .read(trekListProvider.notifier)
-                                      .fetchTreks();
-                                },
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: LightColors.forestPrimary,
-                                ),
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          itemCount: trekListState.treks.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == trekListState.treks.length) {
-                              return const SizedBox(height: 80);
-                            }
-
-                            final trek = trekListState.treks[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: TrekCard(
-                                trek: trek,
-                                onTap: () {
-                                  // TODO: Navigate to TrekDetailsScreen
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Selected: ${trek.name}'),
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
+                      ? _ErrorState(
+                          onRetry: () {
+                            ref.read(trekListProvider.notifier).fetchTreks();
                           },
-                        ),
+                        )
+                      : trekListState.treks.isEmpty
+                          ? _EmptyState()
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              itemCount: trekListState.treks.length + 1,
+                              itemBuilder: (context, index) {
+                                if (index == trekListState.treks.length) {
+                                  return const SizedBox(height: 80);
+                                }
+
+                                final trek = trekListState.treks[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: TrekCard(
+                                    trek: trek,
+                                    onTap: () {
+                                      // TODO: Navigate to TrekDetailsScreen
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Selected: ${trek.name}'),
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
             ),
           ],
         ),
@@ -276,14 +248,14 @@ class _TrekListScreenState extends ConsumerState<TrekListScreen> {
   }
 }
 
-/// Filter chip widget
-class _FilterChip extends StatelessWidget {
+/// Difficulty filter chip
+class _DifficultyChip extends StatelessWidget {
   final String label;
   final bool isSelected;
   final Color? color;
   final VoidCallback onTap;
 
-  const _FilterChip({
+  const _DifficultyChip({
     required this.label,
     required this.isSelected,
     required this.onTap,
@@ -299,23 +271,90 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? (color ?? LightColors.forestPrimary)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? (color ?? LightColors.forestPrimary)
-                : Colors.black.withValues(alpha: 0.1),
-            width: 1,
-          ),
+              : Colors.black.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           label,
           style: AppTextStyles.caption.copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-            color: isSelected ? Colors.white : LightColors.textSecondary,
+            color: isSelected
+                ? (color == LightColors.peakAmber || color == LightColors.sosRed
+                    ? Colors.black
+                    : Colors.white)
+                : LightColors.textPrimary,
+            fontWeight: FontWeight.w600,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Error state
+class _ErrorState extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _ErrorState({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline_rounded,
+            size: 56,
+            color: LightColors.sosRed,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load treks',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: LightColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: onRetry,
+            style: FilledButton.styleFrom(
+              backgroundColor: LightColors.forestPrimary,
+            ),
+            child: Text(
+              'Retry',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Empty state
+class _EmptyState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.map_rounded,
+            size: 56,
+            color: LightColors.textSecondary.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No treks found',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: LightColors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
