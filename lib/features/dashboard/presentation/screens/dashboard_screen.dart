@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
+import 'package:path_app/core/theme/design_tokens.dart';
+import 'package:path_app/core/components/index.dart';
 import 'package:path_app/features/trekking/presentation/viewmodels/itinerary_providers.dart';
+import '../widgets/animated_stat_counter.dart';
+import '../widgets/dashboard_hero.dart';
+import '../widgets/achievements_grid.dart';
+import '../widgets/motivational_card.dart';
+import '../widgets/stats_overview_section.dart';
+import '../widgets/quick_action_cards.dart';
 
-//
-/// 
+/// Premium Dashboard Screen - World-class design that makes users feel the difference
+///
 /// Design Philosophy (15 UX Laws Applied):
 /// 1. Hick's Law: Reduced choices to core CTAs (Explore, Browse, Profile)
 /// 2. Fitts's Law: Large touch targets for critical actions (Explore button = 56px height)

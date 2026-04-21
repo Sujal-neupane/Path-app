@@ -253,7 +253,7 @@ class TrekkingRemoteDataSourceImpl implements TrekkingRemoteDataSource {
     try {
       final queryParams = {
         if (difficulty != null && difficulty.isNotEmpty) 'difficulty': difficulty,
-        if (maxDays != null) 'maxDays': maxDays,
+        'maxDays': ?maxDays,
         if (season != null && season.isNotEmpty) 'season': season,
       };
 

@@ -23,7 +23,7 @@ import 'package:path_app/core/theme/app_text_styles.dart';
 class TrekDetailsScreen extends StatelessWidget {
   final dynamic trek;
 
-  const TrekDetailsScreen({Key? key, required this.trek}) : super(key: key);
+  const TrekDetailsScreen({super.key, required this.trek});
 
   @override
   Widget build(BuildContext context) {
