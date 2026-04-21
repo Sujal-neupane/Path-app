@@ -43,14 +43,6 @@ class Radius {
   static const double lg = 16.0;      // Large
   static const double xl = 20.0;      // Extra large
   static const double full = 999.0;   // Circular
-
-  // Shortcuts for common shapes
-  static const Radius xsRadius = Radius.circular(xs);
-  static const Radius smRadius = Radius.circular(sm);
-  static const Radius mdRadius = Radius.circular(md);
-  static const Radius lgRadius = Radius.circular(lg);
-  static const Radius xlRadius = Radius.circular(xl);
-  static const Radius fullRadius = Radius.circular(full);
 }
 
 /// Shadow system - elevation-based shadows for depth
@@ -349,6 +341,6 @@ class AppGradients {
   static final LinearGradient fadeHorizontal = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [Colors.white, Colors.white.withOpacity(0)],
+    colors: [Colors.white, Colors.white.withValues(alpha: 0)],
   );
 }

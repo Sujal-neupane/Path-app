@@ -155,22 +155,23 @@ class _AchievementBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          width: double.infinity,
+        AspectRatio(
           aspectRatio: 1,
-          decoration: BoxDecoration(
-            color: achievement.color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(Radius.md),
-            border: Border.all(
-              color: achievement.color.withOpacity(0.3),
-              width: 1,
+          child: Container(
+            decoration: BoxDecoration(
+              color: achievement.color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(Radius.md),
+              border: Border.all(
+                color: achievement.color.withOpacity(0.3),
+                width: 1,
+              ),
             ),
-          ),
-          child: Center(
-            child: Icon(
-              achievement.icon,
-              color: achievement.color,
-              size: 28,
+            child: Center(
+              child: Icon(
+                achievement.icon,
+                color: achievement.color,
+                size: 28,
+              ),
             ),
           ),
         ),

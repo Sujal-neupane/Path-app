@@ -99,7 +99,7 @@ class TrekCardSkeleton extends StatelessWidget {
           width: 1,
         ),
       ),
-      overflow: Hidden.hidden,
+      clipBehavior: Clip.hardEdge,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
