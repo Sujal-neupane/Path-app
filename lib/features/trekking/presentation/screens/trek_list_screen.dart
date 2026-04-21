@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_app/core/theme/light_colors.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
 import 'package:path_app/core/theme/design_tokens.dart';
 import 'package:path_app/core/components/index.dart';
+import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/features/trekking/presentation/viewmodels/trekking_providers.dart';
 
 /// Premium Trek List Screen - Clean discovery experience
@@ -144,7 +145,10 @@ class _TrekListScreenState extends ConsumerState<TrekListScreen> {
                       padding: EdgeInsets.only(bottom: Spacing.lg),
                       child: _TrekListCard(
                         trek: trek,
-                        onTap: widget.onTrekSelected,
+                        onTap: () {
+                          // Navigate to trek details
+                          context.push('/trek-details/${trek.id}');
+                        },
                       ),
                     );
                   },
