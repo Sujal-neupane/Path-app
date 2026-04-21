@@ -8,7 +8,7 @@ import '../../features/trekking/presentation/screens/trek_details_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
-    initialLocation: '/',
+    initialLocation: '/dashboard',
     routes: <RouteBase>[
       GoRoute(
         path: '/',
