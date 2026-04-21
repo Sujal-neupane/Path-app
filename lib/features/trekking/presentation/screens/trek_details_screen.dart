@@ -1,404 +1,312 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
+import 'package:path_app/core/theme/design_tokens.dart';
+import 'package:path_app/core/components/index.dart';
+import 'package:path_app/features/trekking/presentation/viewmodels/trekking_providers.dart';
 
-/// ✨ MASTERPIECE TREK DETAILS - Pinterest Composition (Minimal + Aesthetic)
-///
-/// Design Approach:
-/// - Consistent icon colors (unified palette)
-/// - Pinterest-style variable card sizes (content-driven)
-/// - Minimal aesthetic (white space, clean)
-/// - Proper image handling with fallbacks
-/// - Variable card heights: bigger for content-heavy, smaller for simple
-///
-/// UX Laws Applied:
-/// 1. Hick's Law: Reduced choice complexity
-/// 2. Fitts's Law: Large touch targets for CTAs (60px+)
-/// 3. Miller's Law: 5-7 items max per section
-/// 4. Peak-End Rule: Hero image + powerful CTA ending
-/// 5. Aesthetic-Usability: Minimal design feels premium
-/// 6. Consistency: Unified icon colors, spacing, shadows
-/// 7. Prägnanz: Simple, clean layouts
+/// Premium Trek Details Screen - Comprehensive information display
+/// UX Laws: Progressive Disclosure (info appears as scroll), Miller's Law (group related info)
+class TrekDetailsScreen extends ConsumerWidget {
+  final String trekId;
+  final VoidCallback? onCreateItinerary;
 
-class TrekDetailsScreen extends StatelessWidget {
-  final dynamic trek;
-
-  const TrekDetailsScreen({super.key, required this.trek});
+  const TrekDetailsScreen({
+    super.key,
+    required this.trekId,
+    this.onCreateItinerary,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trekDetails = ref.watch(trekDetailsProvider(trekId));
+
     return Scaffold(
       backgroundColor: LightColors.stoneWhite,
-      body: CustomScrollView(
-        slivers: [
-          // ============ HERO SECTION ============
-          SliverAppBar(
-            expandedHeight: 280,
-            collapsedHeight: 0,
-            toolbarHeight: 0,
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            pinned: false,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                children: [
-                  // Image or placeholder with proper handling
-                  Container(
-                    color: LightColors.forestPrimary.withValues(alpha: 0.12),
-                    child: _TrekImagePlaceholder(),
-                  ),
-
-                  // Gradient overlay
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.1),
-                            Colors.black.withValues(alpha: 0.4),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Back button
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    child: SafeArea(
-                      child: _RoundButton(
-                        icon: Icons.arrow_back_rounded,
-                        onTap: () => Navigator.pop(context),
-                      ),
-                    ),
-                  ),
-
-                  // Difficulty badge
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: SafeArea(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.trending_up_rounded,
-                              color: LightColors.peakAmber,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              trek.difficultyRating.toUpperCase(),
-                              style: AppTextStyles.caption.copyWith(
-                                color: LightColors.peakAmber,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Title + location at bottom
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.5),
-                          ],
-                        ),
-                      ),
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            trek.name,
-                            style: AppTextStyles.h1.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 36,
-                              height: 1.1,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.location_on_rounded,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                trek.location,
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ============ CONTENT ============
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 28),
-
-                  // ========== SECTION 1: KEY STATS (Compact, 3 columns) ==========
-                  _SectionHeader(title: "Trek Overview", subtitle: "Key metrics"),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _CompactStatCard(
-                          value: trek.totalDistance.toStringAsFixed(1),
-                          unit: 'km',
-                          label: 'Distance',
-                          icon: Icons.route_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _CompactStatCard(
-                          value: trek.estimatedDays.toString(),
-                          unit: 'days',
-                          label: 'Duration',
-                          icon: Icons.calendar_month_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _CompactStatCard(
-                          value: trek.totalElevationGain.toStringAsFixed(0),
-                          unit: 'm',
-                          label: 'Elevation',
-                          icon: Icons.trending_up_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _CompactStatCard(
-                          value: trek.maxAltitude.toStringAsFixed(0),
-                          unit: 'm',
-                          label: 'Max Alt',
-                          icon: Icons.landscape_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _CompactStatCard(
-                          value: trek.bestSeason,
-                          unit: '',
-                          label: 'Season',
-                          icon: Icons.wb_sunny_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _CompactStatCard(
-                          value: trek.difficultyRating,
-                          unit: '',
-                          label: 'Level',
-                          icon: Icons.person_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-
-                  // ========== SECTION 2: ABOUT (LARGE CARD - More content) ==========
-                  _SectionHeader(title: "About This Trek", subtitle: "Full experience"),
-                  const SizedBox(height: 14),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: LightColors.forestPrimary.withValues(alpha: 0.08),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 12,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(28),
-                    child: Text(
-                      trek.description,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: LightColors.textPrimary,
-                        height: 1.7,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-
-                  // ========== SECTION 3: ROUTE HIGHLIGHTS (Variable sizes) ==========
-                  _SectionHeader(title: "Route Highlights", subtitle: "Follow the path"),
-                  const SizedBox(height: 14),
-                  _RouteHighlightTimeline(trek: trek),
-                  const SizedBox(height: 48),
-
-                  // ========== SECTION 4: SEASONAL INFO (2 columns) ==========
-                  _SectionHeader(title: "Best Time to Trek", subtitle: "Seasonal guide"),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _SeasonalCard(
-                          season: "Spring",
-                          emoji: "🌸",
-                          description: "Clear skies, blooming flowers. Peak season.",
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _SeasonalCard(
-                          season: "Autumn",
-                          emoji: "🍂",
-                          description: "Stable weather, excellent visibility.",
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 48),
-
-                  // ========== SECTION 5: DIFFICULTY BREAKDOWN ==========
-                  _SectionHeader(title: "Challenge Level", subtitle: "What to expect"),
-                  const SizedBox(height: 14),
-                  _DifficultyMeter(
-                    label: "Physical",
-                    value: 0.75,
-                  ),
-                  const SizedBox(height: 12),
-                  _DifficultyMeter(
-                    label: "Altitude",
-                    value: 0.85,
-                  ),
-                  const SizedBox(height: 12),
-                  _DifficultyMeter(
-                    label: "Technical",
-                    value: 0.25,
-                  ),
-                  const SizedBox(height: 48),
-
-                  // ========== CTAs (Large, prominent) ==========
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _SecondaryButton(
-                          icon: Icons.download_rounded,
-                          label: "Download",
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _SecondaryButton(
-                          icon: Icons.favorite_border_rounded,
-                          label: "Save",
-                          onTap: () {},
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _PrimaryButton(
-                    label: "Start Trek",
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ),
-        ],
+      body: trekDetails.when(
+        loading: () => const _LoadingState(),
+        error: (error, _) => _ErrorState(error: error.toString()),
+        data: (trek) => _TrekDetailsContent(
+          trek: trek,
+          onCreateItinerary: onCreateItinerary,
+        ),
       ),
     );
   }
 }
 
+class _TrekDetailsContent extends StatelessWidget {
+  final dynamic trek;
+  final VoidCallback? onCreateItinerary;
+
+  const _TrekDetailsContent({
+    required this.trek,
+    this.onCreateItinerary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      slivers: [
+        // Hero section with back button
+        SliverAppBar(
+          expandedHeight: 200,
+          pinned: true,
+          backgroundColor: LightColors.forestPrimary,
+          leading: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              margin: EdgeInsets.all(Spacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(Radius.sm),
+              ),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          flexibleSpace: FlexibleSpaceBar(
+            background: Container(
+              color: LightColors.forestPrimary,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(Spacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          trek.name ?? 'Trek',
+                          style: AppTextStyles.h1.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: Spacing.sm),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_rounded,
+                              size: 16,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                            SizedBox(width: Spacing.xs),
+                            Text(
+                              trek.location ?? 'Unknown',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: Colors.white.withValues(alpha: 0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Quick stats section (Miller's Law: 3 key metrics)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(Spacing.lg),
+            child: Container(
+              padding: EdgeInsets.all(Spacing.lg),
+              decoration: BoxDecoration(
+                color: LightColors.surfaceWhite,
+                border: Border.all(
+                  color: LightColors.dividerLight,
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(Radius.lg),
+                boxShadow: AppShadows.subtle,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _DetailStat(
+                    icon: Icons.straighten_rounded,
+                    label: 'Distance',
+                    value: '${trek.totalDistance ?? 0} km',
+                    color: LightColors.forestPrimary,
+                  ),
+                  _DetailStat(
+                    icon: Icons.trending_up_rounded,
+                    label: 'Elevation',
+                    value: '${trek.totalElevationGain ?? 0}m',
+                    color: LightColors.altitudeBlue,
+                  ),
+                  _DetailStat(
+                    icon: Icons.calendar_today_rounded,
+                    label: 'Days',
+                    value: '${trek.estimatedDays ?? 0}',
+                    color: LightColors.peakAmber,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        SliverToBoxAdapter(child: SizedBox(height: Spacing.lg)),
+
+        // Description section
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'About This Trek',
+                  style: AppTextStyles.h3.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: LightColors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: Spacing.md),
+                Text(
+                  trek.description ??
+                      'This is a premium trekking experience designed for adventure seekers.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: LightColors.textSecondary,
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
+
+        // Difficulty breakdown
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
+            child: _DifficultyBreakdown(trek: trek),
+          ),
+        ),
+
+        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
+
+        // Best season section
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
+            child: _BestSeasonCard(bestSeason: trek.bestSeason),
+          ),
+        ),
+
+        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
+
+        // Permits section
+        if (trek.permitsRequired ?? false)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
+              child: _PermitsCard(),
+            ),
+          ),
+
+        if (trek.permitsRequired ?? false)
+          SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
+
+        // Amenities grid
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
+            child: _AmenitiesSection(),
+          ),
+        ),
+
+        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
+
+        // Rating section
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
+            child: _RatingSection(
+              rating: trek.averageRating ?? 0,
+              completionCount: trek.completionCount ?? 0,
+            ),
+          ),
+        ),
+
+        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
+
+        // CTA buttons (sticky-like positioning with sliver)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(Spacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PrimaryButton(
+                  label: 'Create Itinerary',
+                  onTap: onCreateItinerary,
+                  color: LightColors.forestPrimary,
+                ),
+                SizedBox(height: Spacing.md),
+                _SecondaryButton(
+                  label: 'Save Trek',
+                  icon: Icons.bookmark_outline_rounded,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        SliverToBoxAdapter(child: SizedBox(height: Spacing.lg)),
+      ],
+    );
+  }
+}
+
 // ============================================================================
-// COMPONENTS - Consistent, minimal design
+// COMPONENTS
 // ============================================================================
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
+class _DetailStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
 
-  const _SectionHeader({
-    required this.title,
-    required this.subtitle,
+  const _DetailStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Icon(icon, color: color, size: 24),
+        SizedBox(height: Spacing.sm),
         Text(
-          title,
-          style: AppTextStyles.h2.copyWith(
+          value,
+          style: AppTextStyles.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
             color: LightColors.textPrimary,
-            fontWeight: FontWeight.w900,
-            fontSize: 26,
           ),
         ),
-        const SizedBox(height: 2),
         Text(
-          subtitle,
+          label,
           style: AppTextStyles.caption.copyWith(
             color: LightColors.textSecondary,
-            fontWeight: FontWeight.w500,
+            fontSize: 10,
           ),
         ),
       ],
@@ -406,75 +314,261 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _CompactStatCard extends StatelessWidget {
-  final String value;
-  final String unit;
-  final String label;
-  final IconData icon;
+class _DifficultyBreakdown extends StatelessWidget {
+  final dynamic trek;
 
-  const _CompactStatCard({
-    required this.value,
-    required this.unit,
+  const _DifficultyBreakdown({required this.trek});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Difficulty Breakdown',
+          style: AppTextStyles.h3.copyWith(
+            fontWeight: FontWeight.w600,
+            color: LightColors.textPrimary,
+          ),
+        ),
+        SizedBox(height: Spacing.lg),
+        _DifficultyBar(
+          label: 'Physical',
+          percentage: 0.7,
+          color: LightColors.altitudeBlue,
+        ),
+        SizedBox(height: Spacing.lg),
+        _DifficultyBar(
+          label: 'Altitude',
+          percentage: 0.85,
+          color: LightColors.sosRed,
+        ),
+        SizedBox(height: Spacing.lg),
+        _DifficultyBar(
+          label: 'Technical',
+          percentage: 0.4,
+          color: LightColors.peakAmber,
+        ),
+      ],
+    );
+  }
+}
+
+class _DifficultyBar extends StatelessWidget {
+  final String label;
+  final double percentage;
+  final Color color;
+
+  const _DifficultyBar({
     required this.label,
+    required this.percentage,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              '${(percentage * 100).toInt()}%',
+              style: AppTextStyles.caption.copyWith(
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: Spacing.sm),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(Radius.sm),
+          child: LinearProgressIndicator(
+            value: percentage,
+            minHeight: 6,
+            backgroundColor: LightColors.dividerLight,
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BestSeasonCard extends StatelessWidget {
+  final String? bestSeason;
+
+  const _BestSeasonCard({this.bestSeason});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(Spacing.lg),
+      decoration: BoxDecoration(
+        color: LightColors.surfaceWhite,
+        border: Border.all(
+          color: LightColors.dividerLight,
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(Radius.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Best Season',
+            style: AppTextStyles.h3.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: Spacing.md),
+          Text(
+            bestSeason ?? 'Spring & Autumn',
+            style: AppTextStyles.bodyLarge.copyWith(
+              fontWeight: FontWeight.w600,
+              color: LightColors.forestPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PermitsCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(Spacing.lg),
+      decoration: BoxDecoration(
+        color: LightColors.redLight,
+        border: Border.all(
+          color: LightColors.sosRed.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(Radius.lg),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.document_scanner_rounded,
+            color: LightColors.sosRed,
+            size: 24,
+          ),
+          SizedBox(width: Spacing.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Permits Required',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: LightColors.sosRed,
+                  ),
+                ),
+                SizedBox(height: Spacing.xs),
+                Text(
+                  'Check requirements before booking',
+                  style: AppTextStyles.caption.copyWith(
+                    color: LightColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AmenitiesSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Available Amenities',
+          style: AppTextStyles.h3.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: Spacing.lg),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: Spacing.lg,
+          mainAxisSpacing: Spacing.lg,
+          childAspectRatio: 0.85,
+          children: [
+            _AmenityCard(
+              icon: Icons.home_rounded,
+              label: 'Teahouses',
+            ),
+            _AmenityCard(
+              icon: Icons.water_rounded,
+              label: 'Water Source',
+            ),
+            _AmenityCard(
+              icon: Icons.restaurant_rounded,
+              label: 'Food Available',
+            ),
+            _AmenityCard(
+              icon: Icons.medical_services_rounded,
+              label: 'Medical Help',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AmenityCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _AmenityCard({
     required this.icon,
+    required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: LightColors.surfaceWhite,
         border: Border.all(
-          color: LightColors.forestPrimary.withValues(alpha: 0.08),
+          color: LightColors.dividerLight,
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 1),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(Radius.lg),
       ),
-      padding: const EdgeInsets.all(14),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icon - consistent grey color
           Icon(
             icon,
-            color: LightColors.textSecondary.withValues(alpha: 0.6),
-            size: 20,
+            color: LightColors.forestPrimary,
+            size: 32,
           ),
-          const SizedBox(height: 10),
-
-          // Value
-          Text(
-            value,
-            style: AppTextStyles.h3.copyWith(
-              color: LightColors.textPrimary,
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
-            ),
-          ),
-
-          // Unit + label
-          if (unit.isNotEmpty)
-            Text(
-              unit,
-              style: AppTextStyles.caption.copyWith(
-                color: LightColors.textSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          const SizedBox(height: 4),
+          SizedBox(height: Spacing.md),
           Text(
             label,
             style: AppTextStyles.caption.copyWith(
-              color: LightColors.textSecondary,
-              fontSize: 11,
               fontWeight: FontWeight.w600,
+              color: LightColors.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -484,351 +578,122 @@ class _CompactStatCard extends StatelessWidget {
   }
 }
 
-class _RouteHighlightTimeline extends StatelessWidget {
-  final dynamic trek;
+class _RatingSection extends StatelessWidget {
+  final double rating;
+  final int completionCount;
 
-  const _RouteHighlightTimeline({required this.trek});
+  const _RatingSection({
+    required this.rating,
+    required this.completionCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _RoutePoint(
-          order: 1,
-          title: "Kathmandu",
-          subtitle: "1,400 m",
-          icon: Icons.location_city_rounded,
-          isFirst: true,
-          hasConnector: true,
+        Text(
+          'Ratings & Reviews',
+          style: AppTextStyles.h3.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        _RoutePoint(
-          order: 2,
-          title: "Namche Bazaar",
-          subtitle: "3,440 m",
-          icon: Icons.store_rounded,
-          hasConnector: true,
-          badge: "Acclimatize",
-        ),
-        _RoutePoint(
-          order: 3,
-          title: "Tengboche",
-          subtitle: "3,867 m",
-          icon: Icons.temple_buddhist_rounded,
-          hasConnector: true,
-        ),
-        _RoutePoint(
-          order: 4,
-          title: "Everest Base Camp",
-          subtitle: "5,364 m",
-          icon: Icons.flag_rounded,
-          isLast: true,
-          badge: "Finish",
+        SizedBox(height: Spacing.lg),
+        Container(
+          padding: EdgeInsets.all(Spacing.lg),
+          decoration: BoxDecoration(
+            color: LightColors.surfaceWhite,
+            border: Border.all(
+              color: LightColors.dividerLight,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(Radius.lg),
+          ),
+          child: Row(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    rating.toStringAsFixed(1),
+                    style: AppTextStyles.h1.copyWith(
+                      color: LightColors.peakAmber,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: Spacing.xs),
+                  Row(
+                    children: List.generate(
+                      5,
+                      (index) => Icon(
+                        index < rating.toInt()
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
+                        color: LightColors.peakAmber,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(width: Spacing.xxxl),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$completionCount explorers',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: LightColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: Spacing.xs),
+                    Text(
+                      'have completed this trek',
+                      style: AppTextStyles.caption.copyWith(
+                        color: LightColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-class _RoutePoint extends StatelessWidget {
-  final int order;
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool isFirst;
-  final bool isLast;
-  final bool hasConnector;
-  final String? badge;
-
-  const _RoutePoint({
-    required this.order,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    this.isFirst = false,
-    this.isLast = false,
-    this.hasConnector = false,
-    this.badge,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Stack(
-        children: [
-          // Connector line
-          if (hasConnector)
-            Positioned(
-              left: 21,
-              top: 50,
-              width: 2,
-              height: 60,
-              child: Container(
-                color: LightColors.forestPrimary.withValues(alpha: 0.15),
-              ),
-            ),
-
-          // Content
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Number circle (variable size based on position)
-              Container(
-                width: isFirst || isLast ? 48 : 44,
-                height: isFirst || isLast ? 48 : 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isFirst || isLast
-                      ? LightColors.forestPrimary.withValues(alpha: 0.15)
-                      : LightColors.forestPrimary.withValues(alpha: 0.08),
-                  border: Border.all(
-                    color: isFirst || isLast
-                        ? LightColors.forestPrimary
-                        : LightColors.textSecondary.withValues(alpha: 0.3),
-                    width: isFirst || isLast ? 2 : 1.5,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    order.toString(),
-                    style: AppTextStyles.h3.copyWith(
-                      color: isFirst || isLast
-                          ? LightColors.forestPrimary
-                          : LightColors.textSecondary,
-                      fontWeight: FontWeight.w900,
-                      fontSize: isFirst || isLast ? 18 : 16,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Content card
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isFirst || isLast
-                        ? LightColors.forestPrimary.withValues(alpha: 0.04)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: LightColors.forestPrimary.withValues(alpha: 0.08),
-                      width: 1,
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  style: AppTextStyles.bodyLarge.copyWith(
-                                    color: LightColors.textPrimary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  subtitle,
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: LightColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            icon,
-                            color: LightColors.textSecondary.withValues(alpha: 0.5),
-                            size: 18,
-                          ),
-                        ],
-                      ),
-                      if (badge != null) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: LightColors.peakAmber.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          child: Text(
-                            badge!,
-                            style: AppTextStyles.caption.copyWith(
-                              color: LightColors.peakAmber,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SeasonalCard extends StatelessWidget {
-  final String season;
-  final String emoji;
-  final String description;
-
-  const _SeasonalCard({
-    required this.season,
-    required this.emoji,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: LightColors.forestPrimary.withValues(alpha: 0.08),
-          width: 1,
-        ),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            emoji,
-            style: const TextStyle(fontSize: 32),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            season,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: LightColors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            description,
-            style: AppTextStyles.caption.copyWith(
-              color: LightColors.textSecondary,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DifficultyMeter extends StatelessWidget {
+class _PrimaryButton extends StatelessWidget {
   final String label;
-  final double value;
+  final VoidCallback? onTap;
+  final Color color;
 
-  const _DifficultyMeter({
+  const _PrimaryButton({
     required this.label,
-    required this.value,
+    this.onTap,
+    this.color = LightColors.forestPrimary,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: LightColors.forestPrimary.withValues(alpha: 0.08),
-          width: 1,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: Spacing.lg),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(Radius.md),
+          boxShadow: AppShadows.medium,
         ),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: LightColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                '${(value * 100).toInt()}%',
-                style: AppTextStyles.caption.copyWith(
-                  color: LightColors.forestPrimary,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: value,
-              minHeight: 6,
-              backgroundColor: Colors.grey.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation(LightColors.forestPrimary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RoundButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _RoundButton({
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Icon(
-              icon,
-              color: Colors.black,
-              size: 20,
+        child: Center(
+          child: Text(
+            label,
+            style: AppTextStyles.button.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -838,118 +703,66 @@ class _RoundButton extends StatelessWidget {
 }
 
 class _SecondaryButton extends StatelessWidget {
-  final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final IconData? icon;
 
   const _SecondaryButton({
-    required this.icon,
     required this.label,
-    required this.onTap,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 52,
+      padding: EdgeInsets.symmetric(vertical: Spacing.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: LightColors.surfaceWhite,
         border: Border.all(
-          color: LightColors.forestPrimary.withValues(alpha: 0.2),
-          width: 2,
+          color: LightColors.forestPrimary,
+          width: 1.5,
         ),
+        borderRadius: BorderRadius.circular(Radius.md),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: LightColors.forestPrimary,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: AppTextStyles.button.copyWith(
-                  color: LightColors.forestPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+      child: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, color: LightColors.forestPrimary, size: 20),
+              SizedBox(width: Spacing.sm),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _PrimaryButton({
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 60,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            LightColors.forestPrimary,
-            LightColors.forestPrimary.withValues(alpha: 0.9),
+            Text(
+              label,
+              style: AppTextStyles.button.copyWith(
+                color: LightColors.forestPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: LightColors.forestPrimary.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.play_arrow_rounded,
-                color: Colors.white,
-                size: 22,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: AppTextStyles.h3.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
 
-class _TrekImagePlaceholder extends StatelessWidget {
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: CircularProgressIndicator(
+        valueColor: AlwaysStoppedAnimation(LightColors.forestPrimary),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String error;
+
+  const _ErrorState({required this.error});
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -957,17 +770,12 @@ class _TrekImagePlaceholder extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.image_rounded,
-            size: 80,
-            color: LightColors.textSecondary.withValues(alpha: 0.2),
+            Icons.error_outline_rounded,
+            size: 48,
+            color: LightColors.sosRed,
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Trek Image',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: LightColors.textSecondary.withValues(alpha: 0.3),
-            ),
-          ),
+          SizedBox(height: Spacing.lg),
+          Text('Failed to load trek details'),
         ],
       ),
     );
