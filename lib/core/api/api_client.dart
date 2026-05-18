@@ -7,7 +7,7 @@ import 'api_endpoint.dart';
 
 /// Provider for Dio instance
 final dioProvider = Provider<Dio>((ref) {
-  final tokenServiceAsync = ref.watch(tokenStorageServiceProvider);
+  final tokenService = ref.watch(tokenStorageServiceProvider);
   final dio = Dio(
     BaseOptions(
       baseUrl: ApiEndpoints.baseUrl,
@@ -22,9 +22,10 @@ final dioProvider = Provider<Dio>((ref) {
 
   dio.interceptors.add(
     InterceptorsWrapper(
-      onRequest: (options, handler) {
+      onRequest: (options, handler) async {
         final path = options.path;
-        final shouldSkipAuth = path.endsWith(ApiEndpoints.userLogin) ||
+        final shouldSkipAuth =
+            path.endsWith(ApiEndpoints.userLogin) ||
             path.endsWith(ApiEndpoints.userRegister) ||
             path.endsWith(ApiEndpoints.requestPasswordReset) ||
             path.endsWith(ApiEndpoints.resetPassword);
@@ -32,11 +33,7 @@ final dioProvider = Provider<Dio>((ref) {
         if (shouldSkipAuth) {
           options.headers.remove('Authorization');
         } else {
-          final token = tokenServiceAsync.when(
-            data: (service) => service.getToken(),
-            loading: () => null,
-            error: (_, __) => null,
-          );
+          final token = await tokenService.getToken();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -46,7 +43,6 @@ final dioProvider = Provider<Dio>((ref) {
       },
     ),
   );
-
 
   // Add pretty logger for development
   dio.interceptors.add(
@@ -130,8 +126,9 @@ class ApiClient {
     if (error.response != null) {
       final statusCode = error.response?.statusCode;
       final data = error.response?.data;
-      final message =
-          data is Map ? data['message'] ?? 'Server error' : 'Server error';
+      final message = data is Map
+          ? data['message'] ?? 'Server error'
+          : 'Server error';
 
       if (statusCode == 401 || statusCode == 403) {
         return AuthFailure(message, statusCode: statusCode);

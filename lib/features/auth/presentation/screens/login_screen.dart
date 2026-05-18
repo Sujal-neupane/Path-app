@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
 import 'package:path_app/features/auth/presentation/state/auth_state.dart';
+import 'package:path_app/features/auth/presentation/viewmodels/auth_session_controller.dart';
 import 'package:path_app/features/auth/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:path_app/features/auth/presentation/widgets/auth_hero_section.dart';
 import 'package:path_app/features/auth/presentation/widgets/trail_input_field.dart';
 import 'package:path_app/features/auth/presentation/widgets/summit_button.dart';
 import 'package:path_app/features/auth/presentation/widgets/social_login_row.dart';
-import 'package:path_app/features/auth/presentation/screens/register_screen.dart';
-import 'package:path_app/features/trekking/presentation/screens/main_navigation_shell.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -82,47 +82,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     super.dispose();
   }
 
-  void _handleLogin() {
-    ref.read(authViewModelProvider.notifier).login(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-        ).then((_) {
-          if (ref.read(authViewModelProvider) is AuthSuccess) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const MainNavigationShell(),
-              ),
-              (route) => false,
-            );
-          }
-        });
+  Future<void> _handleLogin() async {
+    await ref
+        .read(authViewModelProvider.notifier)
+        .login(_emailController.text.trim(), _passwordController.text.trim());
+    if (!mounted) return;
+    if (ref.read(authViewModelProvider) is AuthSuccess) {
+      final session = await ref.read(authSessionControllerProvider.future);
+      if (!mounted) return;
+      context.go(session.isAuthenticated ? '/dashboard' : '/login');
+    }
   }
 
   void _navigateToRegister() {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const RegisterScreen(),
-        transitionDuration: const Duration(milliseconds: 500),
-        reverseTransitionDuration: const Duration(milliseconds: 400),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeInOutCubic,
-          );
-          return FadeTransition(
-            opacity: curved,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.08),
-                end: Offset.zero,
-              ).animate(curved),
-              child: child,
-            ),
-          );
-        },
-      ),
-    );
+    context.push('/register');
   }
 
   @override
@@ -173,8 +146,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   ),
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding:
-                        EdgeInsets.fromLTRB(28, 36, 28, 20 + bottomPadding),
+                    padding: EdgeInsets.fromLTRB(
+                      28,
+                      36,
+                      28,
+                      20 + bottomPadding,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -252,21 +229,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               GestureDetector(
-                                onTap: () => setState(
-                                    () => _rememberMe = !_rememberMe),
+                                onTap: () =>
+                                    setState(() => _rememberMe = !_rememberMe),
                                 child: Row(
                                   children: [
                                     AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 250),
+                                      duration: const Duration(
+                                        milliseconds: 250,
+                                      ),
                                       width: 20,
                                       height: 20,
                                       decoration: BoxDecoration(
                                         color: _rememberMe
                                             ? LightColors.summitDark
                                             : Colors.transparent,
-                                        borderRadius:
-                                            BorderRadius.circular(6),
+                                        borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
                                           color: _rememberMe
                                               ? LightColors.summitDark
@@ -275,8 +252,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                         ),
                                       ),
                                       child: _rememberMe
-                                          ? const Icon(Icons.check_rounded,
-                                              size: 14, color: Colors.white)
+                                          ? const Icon(
+                                              Icons.check_rounded,
+                                              size: 14,
+                                              color: Colors.white,
+                                            )
                                           : null,
                                     ),
                                     const SizedBox(width: 8),
@@ -322,7 +302,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             label: 'SIGN IN',
                             isLoading: authState is AuthLoading,
                             isSuccess: authState is AuthSuccess,
-                            onPressed: _handleLogin,
+                            onPressed: () => _handleLogin(),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -383,14 +363,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         decoration: BoxDecoration(
           color: LightColors.sosRed.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: LightColors.sosRed.withValues(alpha: 0.12),
-          ),
+          border: Border.all(color: LightColors.sosRed.withValues(alpha: 0.12)),
         ),
         child: Row(
           children: [
-            Icon(Icons.info_outline_rounded,
-                color: LightColors.sosRed.withValues(alpha: 0.7), size: 18),
+            Icon(
+              Icons.info_outline_rounded,
+              color: LightColors.sosRed.withValues(alpha: 0.7),
+              size: 18,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

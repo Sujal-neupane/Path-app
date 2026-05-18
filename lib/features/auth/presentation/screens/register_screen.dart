@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
 import 'package:path_app/features/auth/presentation/state/auth_state.dart';
+import 'package:path_app/features/auth/presentation/viewmodels/auth_session_controller.dart';
 import 'package:path_app/features/auth/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:path_app/features/auth/presentation/widgets/trail_input_field.dart';
 import 'package:path_app/features/auth/presentation/widgets/summit_button.dart';
 import 'package:path_app/features/auth/presentation/widgets/password_strength_indicator.dart';
 import 'package:path_app/features/auth/presentation/widgets/auth_hero_section.dart';
-import 'package:path_app/features/trekking/presentation/screens/main_navigation_shell.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -92,7 +93,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     _progressController.animateTo(0.0, curve: Curves.easeOutCubic);
   }
 
-  void _handleRegister() {
+  Future<void> _handleRegister() async {
     final phoneNumber = _phoneController.text.trim();
     final password = _passwordController.text.trim();
     final vm = ref.read(authViewModelProvider.notifier);
@@ -110,16 +111,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     final fullName = _nameController.text.trim();
     final email = _emailController.text.trim();
 
-    vm.register(fullName, email, phoneNumber, password).then((_) {
-      if (ref.read(authViewModelProvider) is AuthSuccess) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const MainNavigationShell(),
-          ),
-          (route) => false,
-        );
-      }
-    });
+    await vm.register(fullName, email, phoneNumber, password);
+    if (!mounted) return;
+    if (ref.read(authViewModelProvider) is AuthSuccess) {
+      final session = await ref.read(authSessionControllerProvider.future);
+      if (!mounted) return;
+      context.go(session.isAuthenticated ? '/dashboard' : '/login');
+    }
   }
 
   @override
@@ -260,7 +258,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                         color: const Color(0xFF999999),
                                       ),
                                     ),
-
                                   ],
                                 ),
                               ),
@@ -305,7 +302,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                                 isSuccess: authState is AuthSuccess,
                                 onPressed: _currentStep == 0
                                     ? _goToStep2
-                                    : _handleRegister,
+                                    : () => _handleRegister(),
                               ),
                               const SizedBox(height: 20),
 

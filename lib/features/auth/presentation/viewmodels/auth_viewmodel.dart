@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_app/features/auth/data/repositories/auth_repository.dart';
-import 'package:path_app/features/auth/presentation/state/auth_state.dart';// Added for navigation// Added for context/navigation
+import 'package:path_app/features/auth/presentation/state/auth_state.dart';
+import 'package:path_app/features/auth/presentation/viewmodels/auth_session_controller.dart';
 
 final authViewModelProvider = NotifierProvider<AuthViewModel, AuthState>(() {
   return AuthViewModel();
@@ -91,14 +92,21 @@ class AuthViewModel extends Notifier<AuthState> {
     try {
       final repository = await ref.read(authRepositoryProvider.future);
       await repository.login(email, password);
+      await ref.read(authSessionControllerProvider.notifier).refreshSession();
       state = AuthSuccess();
     } catch (e) {
-      state = AuthError(_extractUserMessage(e, 'Login failed. Please try again.'));
+      state = AuthError(
+        _extractUserMessage(e, 'Login failed. Please try again.'),
+      );
     }
   }
 
   Future<void> register(
-      String fullName, String email, String phone, String password) async {
+    String fullName,
+    String email,
+    String phone,
+    String password,
+  ) async {
     state = AuthLoading();
     try {
       final repository = await ref.read(authRepositoryProvider.future);
@@ -108,9 +116,12 @@ class AuthViewModel extends Notifier<AuthState> {
         phonenumber: phone,
         password: password,
       );
+      await ref.read(authSessionControllerProvider.notifier).refreshSession();
       state = AuthSuccess();
     } catch (e) {
-      state = AuthError(_extractUserMessage(e, 'Registration failed. Please try again.'));
+      state = AuthError(
+        _extractUserMessage(e, 'Registration failed. Please try again.'),
+      );
     }
   }
 
@@ -153,9 +164,9 @@ class AuthViewModel extends Notifier<AuthState> {
         return 'Email is required';
       case 'password':
         return 'Password is required';
-      case 'name':
+      case 'fullName':
         return 'Name is required';
-      case 'phone':
+      case 'phoneNumber':
         return 'Phone number is required';
       default:
         return 'This field is required';

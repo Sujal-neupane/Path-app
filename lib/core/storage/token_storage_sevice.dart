@@ -1,60 +1,46 @@
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-final sharedPreferencesProvider = FutureProvider<SharedPreferences>((ref) async {
-  return await SharedPreferences.getInstance();
-});
-
-final tokenStorageServiceProvider = FutureProvider<TokenStorageService>((ref) async {
-  final prefs = await ref.watch(sharedPreferencesProvider.future);
-  return TokenStorageService(prefs);
+final tokenStorageServiceProvider = Provider<TokenStorageService>((ref) {
+  return const TokenStorageService();
 });
 
 class TokenStorageService {
-  // This class is responsible for securely storing and retrieving authentication tokens, such as JWTs, using Flutter's secure storage solutions. It provides methods to save, retrieve, and delete tokens, ensuring that sensitive information is handled safely within the application.
   static const String _tokenKey = 'auth_token';
-  static const String _userIdKey = 'user_id';
+  static const String _userIdKey = 'auth_user_id';
 
-  final SharedPreferences _prefs;
+  final FlutterSecureStorage _secureStorage;
 
-  TokenStorageService(this._prefs);
+  const TokenStorageService({FlutterSecureStorage? secureStorage})
+    : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   Future<void> saveToken(String token) async {
-    await _prefs.setString(_tokenKey, token);
+    await _secureStorage.write(key: _tokenKey, value: token);
   }
 
-  /// Get saved token
-  String? getToken() {
-    return _prefs.getString(_tokenKey);
+  Future<String?> getToken() async {
+    return _secureStorage.read(key: _tokenKey);
   }
 
-  /// Check if token exists
-  bool hasToken() {
-    return _prefs.containsKey(_tokenKey);
+  Future<bool> hasToken() async {
+    final token = await getToken();
+    return token != null && token.isNotEmpty;
   }
 
-  /// Save user ID
   Future<void> saveUserId(String userId) async {
-    await _prefs.setString(_userIdKey, userId);
+    await _secureStorage.write(key: _userIdKey, value: userId);
   }
 
-  /// Get saved user ID
-  String? getUserId() {
-    return _prefs.getString(_userIdKey);
+  Future<String?> getUserId() async {
+    return _secureStorage.read(key: _userIdKey);
   }
 
-  /// Clear all auth data
   Future<void> clearAuthData() async {
-    await _prefs.remove(_tokenKey);
-    await _prefs.remove(_userIdKey);
+    await _secureStorage.delete(key: _tokenKey);
+    await _secureStorage.delete(key: _userIdKey);
   }
 
-  /// Clear only token (keep user ID for re-login)
   Future<void> clearToken() async {
-    await _prefs.remove(_tokenKey);
+    await _secureStorage.delete(key: _tokenKey);
   }
 }
-
-
-// so basically this page defines a TokenStorageService class that uses SharedPreferences to store and manage authentication tokens and user IDs. It provides methods to save, retrieve, check existence, and clear tokens and user IDs, ensuring secure handling of sensitive authentication data within the application.

@@ -8,7 +8,7 @@ import 'package:path_app/features/dashboard/data/models/dashboard_overview_api_m
 import 'package:path_app/features/dashboard/domain/entities/dashboard_overview.dart';
 
 /// Remote datasource with offline-first caching strategy
-/// 
+///
 /// Features:
 /// - Stale-While-Revalidate pattern for optimal UX
 /// - Automatic cache fallback when offline
@@ -36,12 +36,12 @@ class DashboardRemoteDatasourceImpl implements DashboardRemoteDatasource {
     required ApiClient apiClient,
     required SecureCacheService cacheService,
     required String userId,
-  })  : _apiClient = apiClient,
-        _cacheService = cacheService,
-        _userId = userId;
+  }) : _apiClient = apiClient,
+       _cacheService = cacheService,
+       _userId = userId;
 
   /// Fetch overview with offline-first support
-  /// 
+  ///
   /// Strategy for optimal UX:
   /// 1. If forceRefresh → skip cache, fetch from server
   /// 2. Try server fetch:
@@ -76,12 +76,15 @@ class DashboardRemoteDatasourceImpl implements DashboardRemoteDatasource {
       }
 
       // Fetch from server
-      final response = await _apiClient.get(
-        ApiEndpoints.dashboardOverview,
-      );
+      final response = await _apiClient.get(ApiEndpoints.dashboardOverview);
 
       // Parse response
-      final data = response.data as Map<String, dynamic>;
+      final responseMap = (response.data is Map<String, dynamic>)
+          ? response.data as Map<String, dynamic>
+          : <String, dynamic>{};
+      final data = (responseMap['data'] is Map<String, dynamic>)
+          ? responseMap['data'] as Map<String, dynamic>
+          : responseMap;
       final model = DashboardOverviewApiModel.fromJson(data);
 
       // Cache the successful response
@@ -152,28 +155,26 @@ class DashboardFetchException implements Exception {
   });
 
   @override
-  String toString() => 'DashboardFetchException: $message'
+  String toString() =>
+      'DashboardFetchException: $message'
       '${statusCode != null ? ' (Status: $statusCode)' : ''}'
       '${isNetworkError ? ' [Offline]' : ''}';
 }
 
 /// Provider for datasource with dependency injection ✅ DYNAMIC USERID
-/// 
+///
 /// Now uses FamilyProvider to accept userId as parameter
 /// This ensures proper cache isolation per user
-/// 
+///
 /// Usage:
 /// ```dart
 /// ref.watch(dashboardRemoteDatasourceProvider(userId))
 /// ```
-final dashboardRemoteDatasourceProvider = Provider.family<
-    DashboardRemoteDatasource,
-    String>(
-  (ref, userId) {
-    return DashboardRemoteDatasourceImpl(
-      apiClient: ref.watch(apiClientProvider),
-      cacheService: SecureCacheService.instance,
-      userId: userId,
-    );
-  },
-);
+final dashboardRemoteDatasourceProvider =
+    Provider.family<DashboardRemoteDatasource, String>((ref, userId) {
+      return DashboardRemoteDatasourceImpl(
+        apiClient: ref.watch(apiClientProvider),
+        cacheService: SecureCacheService.instance,
+        userId: userId,
+      );
+    });

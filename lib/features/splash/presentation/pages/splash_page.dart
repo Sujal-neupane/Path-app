@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/light_colors.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../controllers/splash_controller.dart';
 
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
+class _SplashPageState extends ConsumerState<SplashPage>
+    with TickerProviderStateMixin {
   late final AnimationController _animController;
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _scaleAnimation;
   late final Animation<Offset> _slideAnimation;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -39,19 +43,15 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       ),
     );
 
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.4, 0.9, curve: Curves.easeOutCubic),
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.4, 0.9, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _animController.forward();
-
-    // Smooth transition to Onboarding
-    Future.delayed(const Duration(milliseconds: 3500), () {
-      if (mounted) context.go('/onboarding');
-    });
   }
 
   @override
@@ -62,6 +62,17 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final router = GoRouter.of(context);
+    final destinationAsync = ref.watch(splashDestinationProvider);
+    destinationAsync.whenData((destination) {
+      if (_hasNavigated) return;
+      _hasNavigated = true;
+      Future.delayed(const Duration(milliseconds: 2200), () {
+        if (!mounted) return;
+        router.go(destination);
+      });
+    });
+
     return Scaffold(
       backgroundColor: LightColors.summitDark, // Keeps the white logo visible
       body: Stack(
@@ -77,7 +88,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               },
             ),
           ),
-          
+
           // Pure, minimalist brand presentation
           Center(
             child: FadeTransition(
@@ -91,7 +102,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       AppAssets.logo,
                       height: 120, // Proud and centered
                       fit: BoxFit.contain,
-                      color: LightColors.logoWhite, // Tint the logo to pristine white
+                      color: LightColors
+                          .logoWhite, // Tint the logo to pristine white
                       errorBuilder: (context, error, stackTrace) => const Text(
                         'P A T H',
                         style: TextStyle(
@@ -142,8 +154,10 @@ class _SplashWavePainter extends CustomPainter {
     path1.moveTo(0, 0);
     path1.lineTo(0, size.height * 0.3 * progress);
     path1.quadraticBezierTo(
-      size.width * 0.3, size.height * 0.4 * progress,
-      size.width * 0.6 * progress, 0
+      size.width * 0.3,
+      size.height * 0.4 * progress,
+      size.width * 0.6 * progress,
+      0,
     );
     path1.close();
     canvas.drawPath(path1, paint1);
@@ -157,20 +171,22 @@ class _SplashWavePainter extends CustomPainter {
     path2.moveTo(size.width, size.height);
     path2.lineTo(size.width, size.height - (size.height * 0.4 * progress));
     path2.quadraticBezierTo(
-      size.width * 0.5, size.height - (size.height * 0.3 * progress),
-      size.width - (size.width * 0.8 * progress), size.height
+      size.width * 0.5,
+      size.height - (size.height * 0.3 * progress),
+      size.width - (size.width * 0.8 * progress),
+      size.height,
     );
     path2.close();
     canvas.drawPath(path2, paint2);
-    
+
     // Tiny subtle abstract sun rising slowly
     final sunPaint = Paint()
       ..color = LightColors.peakAmber.withValues(alpha: 0.4 * progress)
       ..style = PaintingStyle.fill;
-      
+
     double sunX = size.width * 0.8;
     double sunY = size.height * 0.3 - (progress * 40); // Moves up slightly
-    
+
     canvas.drawCircle(Offset(sunX, sunY), size.width * 0.15, sunPaint);
   }
 

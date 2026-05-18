@@ -1,266 +1,194 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_app/core/theme/light_colors.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
-import 'package:path_app/core/theme/design_tokens.dart';
-import 'package:path_app/core/components/index.dart';
-import 'package:path_app/features/trekking/presentation/viewmodels/itinerary_providers.dart';
-import '../widgets/animated_stat_counter.dart';
-import '../widgets/dashboard_hero.dart';
-import '../widgets/achievements_grid.dart';
-import '../widgets/motivational_card.dart';
-import '../widgets/stats_overview_section.dart';
-import '../widgets/quick_action_cards.dart';
+import 'package:path_app/core/theme/light_colors.dart';
+import 'package:path_app/features/auth/presentation/viewmodels/auth_session_controller.dart';
+import 'package:path_app/features/dashboard/domain/entities/dashboard_overview.dart';
+import 'package:path_app/features/dashboard/presentation/viewmodels/dashboard_viewmodel.dart';
+import 'package:path_app/features/treks/domain/entities/trek_summary.dart';
+import 'package:path_app/features/treks/presentation/viewmodels/trek_viewmodel.dart';
 
-/// Premium Dashboard - Clean, Minimal, User-Centric
-/// UX Laws: Hick's, Fitts's, Jakob's, Miller's, Zeigarnik, Peak-End
-/// Design: White background, app colors only, no gradients
 class DashboardScreen extends ConsumerWidget {
-  final VoidCallback? onExploreTreks;
-  final VoidCallback? onViewProfile;
+  const DashboardScreen({super.key});
 
-  const DashboardScreen({
-    super.key,
-    this.onExploreTreks,
-    this.onViewProfile,
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sessionAsync = ref.watch(authSessionControllerProvider);
+
+    return sessionAsync.when(
+      loading: () => const _CenteredLoading(label: 'Preparing dashboard...'),
+      error: (error, stackTrace) => _CenteredError(
+        label: 'Unable to restore your session.',
+        onRetry: () => ref.invalidate(authSessionControllerProvider),
+      ),
+      data: (session) {
+        if (!session.isAuthenticated) {
+          return _CenteredError(
+            label: 'Please sign in to continue.',
+            actionLabel: 'Go to Sign In',
+            onRetry: () => context.go('/login'),
+          );
+        }
+
+        final overviewAsync = ref.watch(dashboardOverviewProvider);
+        final treksAsync = ref.watch(trekListProvider);
+
+        return switch ((overviewAsync, treksAsync)) {
+          (AsyncData<DashboardOverview> overviewData, AsyncData<List<TrekSummary>> treksData) =>
+            _DashboardBody(
+              overview: overviewData.value,
+              featuredTreks: treksData.value.take(3).toList(),
+            ),
+          (AsyncError(), _) || (_, AsyncError()) => _CenteredError(
+              label: 'Failed to load dashboard content.',
+              onRetry: () {
+                ref.invalidate(dashboardOverviewProvider);
+                ref.invalidate(trekListProvider);
+              },
+            ),
+          _ => const _CenteredLoading(label: 'Loading your expedition data...'),
+        };
+      },
+    );
+  }
+}
+
+class _DashboardBody extends ConsumerWidget {
+  final DashboardOverview overview;
+  final List<TrekSummary> featuredTreks;
+
+  const _DashboardBody({
+    required this.overview,
+    required this.featuredTreks,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeItinerary = ref.watch(activeItineraryProvider);
+    final progressPercent = (overview.expedition.progress * 100).clamp(0, 100).toInt();
+    final focusTasks = overview.tasks.take(3).toList();
+    final topInsight = overview.insights.isNotEmpty ? overview.insights.first : null;
 
     return Scaffold(
       backgroundColor: LightColors.stoneWhite,
-      body: activeItinerary.when(
-        loading: () => const _LoadingState(),
-        error: (error, _) => _ErrorState(error: error.toString()),
-        data: (itinerary) {
-          if (itinerary == null) {
-            return _DiscoveryDashboard(onExploreTreks: onExploreTreks);
-          }
-          return _ActiveTrekDashboard(
-            itinerary: itinerary,
-            onViewProfile: onViewProfile,
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// DISCOVERY STATE - No active trek
-// ============================================================================
-
-class _DiscoveryDashboard extends StatelessWidget {
-  final VoidCallback? onExploreTreks;
-
-  const _DiscoveryDashboard({this.onExploreTreks});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        // Hero section
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.all(Spacing.lg),
-            child: DashboardHero(
-              greeting: 'Ready to Trek?',
-              subtitle: 'Start your adventure and explore the world one step at a time.',
-              actionButton: _PrimaryButton(
-                label: 'Explore Treks',
-                onTap: onExploreTreks,
-              ),
-            ),
-          ),
-        ),
-
-        SliverToBoxAdapter(child: SizedBox(height: Spacing.lg)),
-
-        // Quick actions grid (Hick's Law: 4 main actions only)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
-            child: QuickActionsGrid(
-              onExploreTreks: onExploreTreks ?? () {},
-              onViewSaved: () {},
-              onCreateItinerary: () {},
-              onViewProfile: () {},
-            ),
-          ),
-        ),
-
-        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
-
-        // Why trek section
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Why Trek?',
-                  style: AppTextStyles.h2.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: LightColors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: Spacing.lg),
-                _ValuePropCard(
-                  icon: Icons.landscape_rounded,
-                  title: 'Discover Nature',
-                  description: 'Experience breathtaking landscapes and untouched wilderness',
-                  color: LightColors.forestPrimary,
-                ),
-                SizedBox(height: Spacing.lg),
-                _ValuePropCard(
-                  icon: Icons.favorite_rounded,
-                  title: 'Wellness',
-                  description: 'Improve fitness and mental health through adventure',
-                  color: LightColors.altitudeBlue,
-                ),
-                SizedBox(height: Spacing.lg),
-                _ValuePropCard(
-                  icon: Icons.people_rounded,
-                  title: 'Community',
-                  description: 'Connect with fellow trekkers and share experiences',
-                  color: LightColors.peakAmber,
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
-      ],
-    );
-  }
-}
-
-// ============================================================================
-// ACTIVE TREK STATE
-// ============================================================================
-
-class _ActiveTrekDashboard extends StatelessWidget {
-  final dynamic itinerary;
-  final VoidCallback? onViewProfile;
-
-  const _ActiveTrekDashboard({
-    required this.itinerary,
-    this.onViewProfile,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        // Active trek hero (Zeigarnik Effect: highlight active progress)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.all(Spacing.lg),
-            child: _ActiveTrekCard(itinerary: itinerary),
-          ),
-        ),
-
-        SliverToBoxAdapter(child: SizedBox(height: Spacing.lg)),
-
-        // Progress section
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your Progress',
-                  style: AppTextStyles.h3.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: LightColors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: Spacing.lg),
-                _ProgressBar(
-                  daysCompleted: 3,
-                  totalDays: itinerary.totalDays ?? 12,
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
-
-        // Quick stats (Miller's Law: 3 items)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
-            child: StatsOverviewSection(
-              totalTreks: 1,
-              totalElevationM: itinerary.totalElevationGainM ?? 0,
-              totalDays: itinerary.totalDays ?? 0,
-            ),
-          ),
-        ),
-
-        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
-
-        // Next checkpoint
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
-            child: _NextCheckpointCard(),
-          ),
-        ),
-
-        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
-
-        // Motivational message (Peak-End rule: end with motivation)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
-            child: MotivationalCard.forEvening(),
-          ),
-        ),
-
-        SliverToBoxAdapter(child: SizedBox(height: Spacing.xxxl)),
-      ],
-    );
-  }
-}
-
-// ============================================================================
-// SUB-COMPONENTS
-// ============================================================================
-
-class _PrimaryButton extends StatelessWidget {
-  final String label;
-  final VoidCallback? onTap;
-
-  const _PrimaryButton({
-    required this.label,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: Spacing.lg),
-        decoration: BoxDecoration(
+      body: SafeArea(
+        child: RefreshIndicator(
           color: LightColors.forestPrimary,
-          borderRadius: BorderRadius.circular(Radius.md),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTextStyles.button.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
+          onRefresh: () async {
+            ref.invalidate(dashboardOverviewProvider);
+            ref.invalidate(trekListProvider);
+            await ref.read(dashboardOverviewProvider.future);
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+            children: [
+              _DashboardHeader(
+                dateLabel: overview.header.dateLabel.isNotEmpty
+                    ? overview.header.dateLabel
+                    : 'Today',
+                greeting: overview.header.greeting.isNotEmpty
+                    ? overview.header.greeting
+                    : 'Journey Dashboard',
+                onAvatarTap: () => context.go('/profile'),
+              ),
+              const SizedBox(height: 12),
+              _ExpeditionHeroCard(
+                title: overview.expedition.title.isNotEmpty
+                    ? overview.expedition.title
+                    : 'Everest Base Camp',
+                subtitle: overview.expedition.subtitle.isNotEmpty
+                    ? overview.expedition.subtitle
+                    : 'Day 05 • Namche to Tengboche',
+                status: overview.expedition.statusTag.isNotEmpty
+                    ? overview.expedition.statusTag
+                    : 'SYNC OK',
+                progressPercent: progressPercent,
+                onPlanTap: () => context.go('/treks'),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _MetricTile(
+                      icon: Icons.route_rounded,
+                      value: overview.expedition.distance.isNotEmpty
+                          ? overview.expedition.distance
+                          : '11.2 km',
+                      label: 'Distance',
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _MetricTile(
+                      icon: Icons.trending_up_rounded,
+                      value: overview.expedition.ascent.isNotEmpty
+                          ? overview.expedition.ascent
+                          : '+780 m',
+                      label: 'Ascent',
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _MetricTile(
+                      icon: Icons.schedule_rounded,
+                      value: overview.expedition.eta.isNotEmpty
+                          ? overview.expedition.eta
+                          : '5h 20m',
+                      label: 'ETA',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _SectionHeader(
+                title: 'Smart Actions',
+                trailingText: 'Customize',
+                onTap: () => context.go('/profile'),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.terrain_rounded,
+                      title: 'Explore Treks',
+                      subtitle: 'Discover routes',
+                      onTap: () => context.go('/treks'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _ActionTile(
+                      icon: Icons.map_rounded,
+                      title: 'Map + Weather',
+                      subtitle: 'Trail conditions',
+                      onTap: () => context.go('/map-weather'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _SectionHeader(
+                title: 'Featured Treks',
+                trailingText: 'See all',
+                onTap: () => context.go('/treks'),
+              ),
+              const SizedBox(height: 10),
+              ...featuredTreks.map(
+                (trek) => _FeaturedTrekTile(
+                  trek: trek,
+                  onTap: () => context.push('/treks/${trek.id}'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _SectionHeader(title: 'Today Focus'),
+              const SizedBox(height: 10),
+              _FocusChecklist(tasks: focusTasks),
+              if (topInsight != null) ...[
+                const SizedBox(height: 14),
+                _InsightCard(insight: topInsight),
+              ],
+            ],
           ),
         ),
       ),
@@ -268,305 +196,557 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
-class _ValuePropCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-  final Color color;
+class _DashboardHeader extends StatelessWidget {
+  final String dateLabel;
+  final String greeting;
+  final VoidCallback onAvatarTap;
 
-  const _ValuePropCard({
-    required this.icon,
+  const _DashboardHeader({
+    required this.dateLabel,
+    required this.greeting,
+    required this.onAvatarTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                dateLabel.toUpperCase(),
+                style: AppTextStyles.caption.copyWith(
+                  color: LightColors.textSecondary,
+                  letterSpacing: 0.7,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                greeting,
+                style: AppTextStyles.h1.copyWith(
+                  color: LightColors.textPrimary,
+                  fontSize: 44,
+                  fontWeight: FontWeight.w800,
+                  height: 1.05,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        InkWell(
+          onTap: onAvatarTap,
+          borderRadius: BorderRadius.circular(26),
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: LightColors.primaryLight,
+            ),
+            child: const Icon(
+              Icons.landscape_rounded,
+              color: LightColors.forestPrimary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ExpeditionHeroCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String status;
+  final int progressPercent;
+  final VoidCallback onPlanTap;
+
+  const _ExpeditionHeroCard({
     required this.title,
-    required this.description,
-    required this.color,
+    required this.subtitle,
+    required this.status,
+    required this.progressPercent,
+    required this.onPlanTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(Spacing.lg),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: LightColors.surfaceWhite,
-        border: Border.all(
-          color: LightColors.dividerLight,
-          width: 1,
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF184A36), Color(0xFF2B6C50)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(Radius.lg),
-        boxShadow: AppShadows.subtle,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(Radius.md),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          SizedBox(width: Spacing.lg),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: LightColors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: Spacing.xs),
-                Text(
-                  description,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: LightColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActiveTrekCard extends StatelessWidget {
-  final dynamic itinerary;
-
-  const _ActiveTrekCard({required this.itinerary});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(Spacing.lg),
-      decoration: BoxDecoration(
-        color: LightColors.forestPrimary,
-        borderRadius: BorderRadius.circular(Radius.lg),
-        boxShadow: AppShadows.medium,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Active Trek',
-            style: AppTextStyles.caption.copyWith(
-              color: Colors.white.withValues(alpha: 0.8),
-            ),
-          ),
-          SizedBox(height: Spacing.sm),
-          Text(
-            itinerary.name ?? 'Your Trek',
-            style: AppTextStyles.h2.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          SizedBox(height: Spacing.md),
           Row(
             children: [
-              Icon(
-                Icons.location_on_rounded,
-                color: Colors.white.withValues(alpha: 0.9),
-                size: 16,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  status.toUpperCase(),
+                  style: AppTextStyles.caption.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                  ),
+                ),
               ),
-              SizedBox(width: Spacing.xs),
+              const Spacer(),
               Text(
-                'Days: ${itinerary.totalDays ?? 0}',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: Colors.white.withValues(alpha: 0.9),
+                '$progressPercent%',
+                style: AppTextStyles.h3.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: AppTextStyles.h2.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: Colors.white.withValues(alpha: 0.88),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: progressPercent / 100,
+              minHeight: 10,
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              valueColor: const AlwaysStoppedAnimation<Color>(LightColors.peakAmber),
+            ),
+          ),
+          const SizedBox(height: 14),
+          FilledButton(
+            onPressed: onPlanTap,
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: LightColors.summitDark,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: const Text('Plan Next Move'),
+          ),
         ],
       ),
     );
   }
 }
 
-class _ProgressBar extends StatelessWidget {
-  final int daysCompleted;
-  final int totalDays;
+class _MetricTile extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
 
-  const _ProgressBar({
-    required this.daysCompleted,
-    required this.totalDays,
+  const _MetricTile({
+    required this.icon,
+    required this.value,
+    required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    final progress = daysCompleted / totalDays;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Day $daysCompleted of $totalDays',
-              style: AppTextStyles.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              '${(progress * 100).toInt()}%',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: LightColors.forestPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: Spacing.md),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(Radius.sm),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 8,
-            backgroundColor: LightColors.dividerLight,
-            valueColor: AlwaysStoppedAnimation(LightColors.forestPrimary),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _NextCheckpointCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(Spacing.lg),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: LightColors.surfaceWhite,
-        border: Border.all(
-          color: LightColors.dividerLight,
-          width: 1,
-        ),
-        borderRadius: BorderRadius.circular(Radius.lg),
-        boxShadow: AppShadows.subtle,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: LightColors.dividerLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Icon(icon, size: 18, color: LightColors.forestPrimary),
+          const SizedBox(height: 10),
           Text(
-            'Next Checkpoint',
+            value,
             style: AppTextStyles.h3.copyWith(
-              fontWeight: FontWeight.w600,
               color: LightColors.textPrimary,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          SizedBox(height: Spacing.lg),
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: LightColors.altitudeBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(Radius.md),
-                ),
-                child: Icon(
-                  Icons.flag_rounded,
-                  color: LightColors.altitudeBlue,
-                  size: 22,
-                ),
+          Text(
+            label,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: LightColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _ActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Ink(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: LightColors.dividerLight),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: LightColors.primaryLight,
+                borderRadius: BorderRadius.circular(12),
               ),
-              SizedBox(width: Spacing.lg),
-              Expanded(
-                child: Column(
+              child: Icon(icon, color: LightColors.forestPrimary),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: AppTextStyles.h3.copyWith(
+                color: LightColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: LightColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeaturedTrekTile extends StatelessWidget {
+  final TrekSummary trek;
+  final VoidCallback onTap;
+
+  const _FeaturedTrekTile({
+    required this.trek,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: LightColors.dividerLight),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: LightColors.primaryLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.landscape_rounded, color: LightColors.forestPrimary),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    trek.name,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: LightColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${trek.durationDays} days • ${trek.region} • ${trek.rating.toStringAsFixed(1)}★',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: LightColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FocusChecklist extends StatelessWidget {
+  final List<DashboardTask> tasks;
+
+  const _FocusChecklist({required this.tasks});
+
+  @override
+  Widget build(BuildContext context) {
+    if (tasks.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: LightColors.dividerLight),
+        ),
+        child: Text(
+          'You are all set for today. Keep the momentum.',
+          style: AppTextStyles.bodyMedium.copyWith(color: LightColors.textSecondary),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: LightColors.dividerLight),
+      ),
+      child: Column(
+        children: tasks
+            .map(
+              (task) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Namche Bazaar',
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: LightColors.textPrimary,
-                      ),
+                    Icon(
+                      task.done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                      size: 18,
+                      color: task.done ? LightColors.successGreen : LightColors.textSecondary,
                     ),
-                    Text(
-                      '12 km away • 3,440 m altitude',
-                      style: AppTextStyles.caption.copyWith(
-                        color: LightColors.textSecondary,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task.title,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: LightColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (task.meta.isNotEmpty)
+                            Text(
+                              task.meta,
+                              style: AppTextStyles.caption.copyWith(
+                                color: LightColors.textSecondary,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
+            )
+            .toList(),
+      ),
+    );
+  }
+}
+
+class _InsightCard extends StatelessWidget {
+  final DashboardInsight insight;
+
+  const _InsightCard({required this.insight});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: LightColors.dividerLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            insight.title,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: LightColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            insight.value,
+            style: AppTextStyles.h3.copyWith(
+              color: LightColors.forestPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            insight.hint,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: LightColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String? trailingText;
+  final VoidCallback? onTap;
+
+  const _SectionHeader({
+    required this.title,
+    this.trailingText,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: AppTextStyles.h2.copyWith(
+              color: LightColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        if (trailingText != null && onTap != null)
+          InkWell(
+            onTap: onTap,
+            child: Text(
+              trailingText!,
+              style: AppTextStyles.h3.copyWith(
+                color: LightColors.forestPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _CenteredLoading extends StatelessWidget {
+  final String label;
+
+  const _CenteredLoading({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: LightColors.stoneWhite,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: LightColors.forestPrimary),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              style: AppTextStyles.bodyMedium.copyWith(color: LightColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CenteredError extends StatelessWidget {
+  final String label;
+  final String actionLabel;
+  final VoidCallback onRetry;
+
+  const _CenteredError({
+    required this.label,
+    required this.onRetry,
+    this.actionLabel = 'Try Again',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: LightColors.stoneWhite,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 42, color: LightColors.sosRed),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMedium.copyWith(color: LightColors.textSecondary),
+              ),
+              const SizedBox(height: 14),
+              FilledButton(
+                onPressed: onRetry,
+                style: FilledButton.styleFrom(backgroundColor: LightColors.forestPrimary),
+                child: Text(actionLabel),
+              ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// LOADING & ERROR STATES
-// ============================================================================
-
-class _LoadingState extends StatelessWidget {
-  const _LoadingState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation(LightColors.forestPrimary),
-          ),
-          SizedBox(height: Spacing.lg),
-          Text(
-            'Loading your adventure...',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: LightColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String error;
-
-  const _ErrorState({required this.error});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline_rounded,
-            size: 48,
-            color: LightColors.sosRed,
-          ),
-          SizedBox(height: Spacing.lg),
-          Text(
-            'Something went wrong',
-            style: AppTextStyles.h3.copyWith(
-              color: LightColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: Spacing.sm),
-          Text(
-            error,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: LightColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }
