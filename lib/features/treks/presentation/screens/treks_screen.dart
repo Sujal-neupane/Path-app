@@ -106,7 +106,7 @@ class _TreksListView extends StatelessWidget {
             );
           },
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
     );
   }

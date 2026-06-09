@@ -203,7 +203,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
               // ── 2. Detailed Info Body ──
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 120),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
