@@ -33,8 +33,12 @@ class ApiEndpoints {
 
   // SOS Endpoint
   static const String sosAlert = '/sos';
+  static const String sosHistory = '/sos/my';
 
   // Trek Endpoints
   static const String treksList = '/treks';
   static const String trekById = '/treks/{id}';
+
+  // Weather Endpoint
+  static const String weather = '/weather';
 }
