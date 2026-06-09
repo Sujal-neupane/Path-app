@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_app/core/components/clay_container.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
 import 'package:path_app/core/theme/light_colors.dart';
@@ -18,7 +19,6 @@ class TrekDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
-  bool _isTracking = false;
   int _activeTab = 0; // 0 = Route, 1 = Itinerary
   int _activeDayIndex = 0;
   late final PageController _dayPageController = PageController();
@@ -27,26 +27,6 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
   void dispose() {
     _dayPageController.dispose();
     super.dispose();
-  }
-
-  void _toggleTracking() {
-    setState(() {
-      _isTracking = !_isTracking;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isTracking
-              ? 'Route Navigation Active: GPS cache lock engaged.'
-              : 'Navigation tracking paused.',
-        ),
-        backgroundColor: _isTracking
-            ? LightColors.successGreen
-            : LightColors.summitDark,
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   @override
@@ -398,26 +378,22 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(
+                  const Expanded(
                     child: Text(
-                      _isTracking
-                          ? 'GPS Navigation Active'
-                          : 'GPS Offline Idle',
+                      'GPS Offline Support: Engaged',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: _isTracking
-                            ? LightColors.successGreen
-                            : LightColors.textSecondary,
+                        color: LightColors.successGreen,
                       ),
                     ),
                   ),
                   ElevatedButton.icon(
-                    onPressed: _toggleTracking,
+                    onPressed: () {
+                      context.push('/map-weather/navigator', extra: trek.name);
+                    },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isTracking
-                          ? LightColors.successGreen
-                          : LightColors.forestPrimary,
+                      backgroundColor: LightColors.forestPrimary,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       minimumSize: const Size(0, 40),
@@ -429,13 +405,8 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                         vertical: 10,
                       ),
                     ),
-                    icon: Icon(
-                      _isTracking
-                          ? Icons.gps_fixed_rounded
-                          : Icons.gps_not_fixed_rounded,
-                      size: 16,
-                    ),
-                    label: Text(_isTracking ? 'TRACKING' : 'START PLAN'),
+                    icon: const Icon(Icons.gps_fixed_rounded, size: 16),
+                    label: const Text('START PLAN'),
                   ),
                 ],
               ),

@@ -33,7 +33,8 @@ class TrailNavigatorScreen extends StatefulWidget {
 class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
   late List<Waypoint> _waypoints;
   int _currentIndex = 0;
-  double _lerpProgress = 0.0; // From 0.0 to 1.0 between current and next waypoint
+  double _lerpProgress =
+      0.0; // From 0.0 to 1.0 between current and next waypoint
   bool _isPlaying = false;
   int _simulationSpeed = 1; // 1 = 1s, 2 = 500ms, 5 = 200ms
   Timer? _timer;
@@ -54,41 +55,191 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
     // High fidelity coordinate paths based on selected region
     if (widget.region.contains('Annapurna')) {
       _waypoints = const [
-        Waypoint(name: 'Besisahar', lat: 28.2168, lng: 84.3686, alt: 760, distance: '0.0 km'),
-        Waypoint(name: 'Chame', lat: 28.5532, lng: 84.3168, alt: 2670, distance: '14.2 km'),
-        Waypoint(name: 'Manang', lat: 28.6667, lng: 84.0167, alt: 3519, distance: '28.5 km'),
-        Waypoint(name: 'Yak Kharka', lat: 28.7182, lng: 83.9912, alt: 4110, distance: '38.1 km'),
-        Waypoint(name: 'Thorong Phedi', lat: 28.7972, lng: 83.9782, alt: 4540, distance: '45.0 km'),
-        Waypoint(name: 'Thorong La Pass', lat: 28.7915, lng: 83.9382, alt: 5416, distance: '50.3 km'),
-        Waypoint(name: 'Muktinath', lat: 28.8167, lng: 83.8667, alt: 3800, distance: '60.1 km'),
+        Waypoint(
+          name: 'Besisahar',
+          lat: 28.2168,
+          lng: 84.3686,
+          alt: 760,
+          distance: '0.0 km',
+        ),
+        Waypoint(
+          name: 'Chame',
+          lat: 28.5532,
+          lng: 84.3168,
+          alt: 2670,
+          distance: '14.2 km',
+        ),
+        Waypoint(
+          name: 'Manang',
+          lat: 28.6667,
+          lng: 84.0167,
+          alt: 3519,
+          distance: '28.5 km',
+        ),
+        Waypoint(
+          name: 'Yak Kharka',
+          lat: 28.7182,
+          lng: 83.9912,
+          alt: 4110,
+          distance: '38.1 km',
+        ),
+        Waypoint(
+          name: 'Thorong Phedi',
+          lat: 28.7972,
+          lng: 83.9782,
+          alt: 4540,
+          distance: '45.0 km',
+        ),
+        Waypoint(
+          name: 'Thorong La Pass',
+          lat: 28.7915,
+          lng: 83.9382,
+          alt: 5416,
+          distance: '50.3 km',
+        ),
+        Waypoint(
+          name: 'Muktinath',
+          lat: 28.8167,
+          lng: 83.8667,
+          alt: 3800,
+          distance: '60.1 km',
+        ),
       ];
     } else if (widget.region.contains('Langtang')) {
       _waypoints = const [
-        Waypoint(name: 'Syabrubesi', lat: 28.1333, lng: 85.3333, alt: 1460, distance: '0.0 km'),
-        Waypoint(name: 'Lama Hotel', lat: 28.1834, lng: 85.4182, alt: 2470, distance: '11.8 km'),
-        Waypoint(name: 'Langtang Village', lat: 28.2031, lng: 85.4912, alt: 3430, distance: '21.5 km'),
-        Waypoint(name: 'Kyanjin Gompa', lat: 28.2167, lng: 85.6167, alt: 3830, distance: '29.2 km'),
-        Waypoint(name: 'Kyanjin Ri Peak', lat: 28.2289, lng: 85.6212, alt: 4773, distance: '33.8 km'),
+        Waypoint(
+          name: 'Syabrubesi',
+          lat: 28.1333,
+          lng: 85.3333,
+          alt: 1460,
+          distance: '0.0 km',
+        ),
+        Waypoint(
+          name: 'Lama Hotel',
+          lat: 28.1834,
+          lng: 85.4182,
+          alt: 2470,
+          distance: '11.8 km',
+        ),
+        Waypoint(
+          name: 'Langtang Village',
+          lat: 28.2031,
+          lng: 85.4912,
+          alt: 3430,
+          distance: '21.5 km',
+        ),
+        Waypoint(
+          name: 'Kyanjin Gompa',
+          lat: 28.2167,
+          lng: 85.6167,
+          alt: 3830,
+          distance: '29.2 km',
+        ),
+        Waypoint(
+          name: 'Kyanjin Ri Peak',
+          lat: 28.2289,
+          lng: 85.6212,
+          alt: 4773,
+          distance: '33.8 km',
+        ),
       ];
     } else if (widget.region.contains('Poon Hill')) {
       _waypoints = const [
-        Waypoint(name: 'Nayapul', lat: 28.2982, lng: 83.7612, alt: 1070, distance: '0.0 km'),
-        Waypoint(name: 'Tikhedhunga', lat: 28.3456, lng: 83.7214, alt: 1540, distance: '9.2 km'),
-        Waypoint(name: 'Ghorepani', lat: 28.4012, lng: 83.7018, alt: 2860, distance: '18.5 km'),
-        Waypoint(name: 'Poon Hill Peak', lat: 28.4000, lng: 83.7000, alt: 3210, distance: '20.0 km'),
-        Waypoint(name: 'Tadapani', lat: 28.3982, lng: 83.7712, alt: 2630, distance: '29.5 km'),
+        Waypoint(
+          name: 'Nayapul',
+          lat: 28.2982,
+          lng: 83.7612,
+          alt: 1070,
+          distance: '0.0 km',
+        ),
+        Waypoint(
+          name: 'Tikhedhunga',
+          lat: 28.3456,
+          lng: 83.7214,
+          alt: 1540,
+          distance: '9.2 km',
+        ),
+        Waypoint(
+          name: 'Ghorepani',
+          lat: 28.4012,
+          lng: 83.7018,
+          alt: 2860,
+          distance: '18.5 km',
+        ),
+        Waypoint(
+          name: 'Poon Hill Peak',
+          lat: 28.4000,
+          lng: 83.7000,
+          alt: 3210,
+          distance: '20.0 km',
+        ),
+        Waypoint(
+          name: 'Tadapani',
+          lat: 28.3982,
+          lng: 83.7712,
+          alt: 2630,
+          distance: '29.5 km',
+        ),
       ];
     } else {
       // Default: Everest Base Camp path
       _waypoints = const [
-        Waypoint(name: 'Lukla Airport', lat: 27.6878, lng: 86.7314, alt: 2860, distance: '0.0 km'),
-        Waypoint(name: 'Phakding', lat: 27.7382, lng: 86.7112, alt: 2610, distance: '8.2 km'),
-        Waypoint(name: 'Namche Bazaar', lat: 27.8068, lng: 86.7140, alt: 3440, distance: '19.5 km'),
-        Waypoint(name: 'Tengboche', lat: 27.8364, lng: 86.7645, alt: 3860, distance: '29.2 km'),
-        Waypoint(name: 'Dingboche', lat: 27.8931, lng: 86.8315, alt: 4410, distance: '41.0 km'),
-        Waypoint(name: 'Lobuche', lat: 27.9482, lng: 86.8113, alt: 4940, distance: '49.8 km'),
-        Waypoint(name: 'Gorak Shep', lat: 27.9813, lng: 86.9248, alt: 5164, distance: '55.3 km'),
-        Waypoint(name: 'Everest Base Camp', lat: 28.0042, lng: 86.8558, alt: 5364, distance: '62.0 km'),
+        Waypoint(
+          name: 'Lukla Airport',
+          lat: 27.6878,
+          lng: 86.7314,
+          alt: 2860,
+          distance: '0.0 km',
+        ),
+        Waypoint(
+          name: 'Phakding',
+          lat: 27.7382,
+          lng: 86.7112,
+          alt: 2610,
+          distance: '8.2 km',
+        ),
+        Waypoint(
+          name: 'Namche Bazaar',
+          lat: 27.8068,
+          lng: 86.7140,
+          alt: 3440,
+          distance: '19.5 km',
+        ),
+        Waypoint(
+          name: 'Tengboche',
+          lat: 27.8364,
+          lng: 86.7645,
+          alt: 3860,
+          distance: '29.2 km',
+        ),
+        Waypoint(
+          name: 'Dingboche',
+          lat: 27.8931,
+          lng: 86.8315,
+          alt: 4410,
+          distance: '41.0 km',
+        ),
+        Waypoint(
+          name: 'Lobuche',
+          lat: 27.9482,
+          lng: 86.8113,
+          alt: 4940,
+          distance: '49.8 km',
+        ),
+        Waypoint(
+          name: 'Gorak Shep',
+          lat: 27.9813,
+          lng: 86.9248,
+          alt: 5164,
+          distance: '55.3 km',
+        ),
+        Waypoint(
+          name: 'Everest Base Camp',
+          lat: 28.0042,
+          lng: 86.8558,
+          alt: 5364,
+          distance: '62.0 km',
+        ),
       ];
     }
   }
@@ -158,7 +309,11 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
-            const Icon(Icons.emoji_events_rounded, color: LightColors.peakAmber, size: 28),
+            const Icon(
+              Icons.emoji_events_rounded,
+              color: LightColors.peakAmber,
+              size: 28,
+            ),
             const SizedBox(width: 10),
             Text(
               'Route Completed!',
@@ -168,7 +323,9 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
         ),
         content: Text(
           'You have successfully simulated the complete trail route for ${widget.region}. GPS coordinates and offline trackers synced successfully.',
-          style: AppTextStyles.bodyMedium.copyWith(color: LightColors.textSecondary),
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: LightColors.textSecondary,
+          ),
         ),
         actions: [
           TextButton(
@@ -178,12 +335,16 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
             },
             child: Text(
               'Reset',
-              style: AppTextStyles.button.copyWith(color: LightColors.textSecondary),
+              style: AppTextStyles.button.copyWith(
+                color: LightColors.textSecondary,
+              ),
             ),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx),
-            style: FilledButton.styleFrom(backgroundColor: LightColors.forestPrimary),
+            style: FilledButton.styleFrom(
+              backgroundColor: LightColors.forestPrimary,
+            ),
             child: const Text('Great'),
           ),
         ],
@@ -218,6 +379,21 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
     return current.alt + (next.alt - current.alt) * _lerpProgress;
   }
 
+  double get _currentDistanceKm {
+    if (_waypoints.isEmpty) return 0.0;
+    if (_currentIndex >= _waypoints.length - 1) {
+      return _parseDistance(_waypoints.last.distance);
+    }
+    final currentDist = _parseDistance(_waypoints[_currentIndex].distance);
+    final nextDist = _parseDistance(_waypoints[_currentIndex + 1].distance);
+    return currentDist + (nextDist - currentDist) * _lerpProgress;
+  }
+
+  double _parseDistance(String distStr) {
+    final clean = distStr.replaceAll(' km', '').trim();
+    return double.tryParse(clean) ?? 0.0;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -226,7 +402,10 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: LightColors.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: LightColors.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -259,18 +438,21 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: _isPlaying 
-                            ? LightColors.successLight 
+                        color: _isPlaying
+                            ? LightColors.successLight
                             : LightColors.primaryLight,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         _isPlaying ? 'SIMULATING' : 'PAUSED',
                         style: AppTextStyles.caption.copyWith(
-                          color: _isPlaying 
-                              ? LightColors.successGreen 
+                          color: _isPlaying
+                              ? LightColors.successGreen
                               : LightColors.forestPrimary,
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
@@ -294,11 +476,23 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
                         value: _currentLng.toStringAsFixed(5),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
                     Expanded(
                       child: _StatBlock(
                         title: 'ALTITUDE',
                         value: '${_currentAlt.round()} m',
                         valueColor: LightColors.altitudeBlue,
+                      ),
+                    ),
+                    Expanded(
+                      child: _StatBlock(
+                        title: 'DISTANCE WALKED',
+                        value: '${_currentDistanceKm.toStringAsFixed(2)} km',
+                        valueColor: LightColors.successGreen,
                       ),
                     ),
                   ],
@@ -308,7 +502,11 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.location_city_rounded, color: LightColors.forestPrimary, size: 18),
+                    const Icon(
+                      Icons.location_city_rounded,
+                      color: LightColors.forestPrimary,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Next Stop: ',
@@ -329,7 +527,7 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
                       ),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -412,40 +610,48 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
                                 width: 22,
                                 height: 22,
                                 decoration: BoxDecoration(
-                                  color: isPassed 
-                                      ? LightColors.successGreen 
-                                      : isActive 
-                                          ? LightColors.forestPrimary 
-                                          : Colors.white,
+                                  color: isPassed
+                                      ? LightColors.successGreen
+                                      : isActive
+                                      ? LightColors.forestPrimary
+                                      : Colors.white,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: isPassed || isActive 
-                                        ? Colors.transparent 
+                                    color: isPassed || isActive
+                                        ? Colors.transparent
                                         : LightColors.dividerStrong,
                                     width: 1.5,
                                   ),
                                 ),
                                 child: Center(
-                                  child: isPassed 
-                                      ? const Icon(Icons.check, color: Colors.white, size: 12)
-                                      : isActive 
-                                          ? const Icon(Icons.hiking_rounded, color: Colors.white, size: 11)
-                                          : Text(
-                                              '${index + 1}',
-                                              style: AppTextStyles.caption.copyWith(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w800,
-                                                color: LightColors.textTertiary,
-                                              ),
-                                            ),
+                                  child: isPassed
+                                      ? const Icon(
+                                          Icons.check,
+                                          color: Colors.white,
+                                          size: 12,
+                                        )
+                                      : isActive
+                                      ? const Icon(
+                                          Icons.hiking_rounded,
+                                          color: Colors.white,
+                                          size: 11,
+                                        )
+                                      : Text(
+                                          '${index + 1}',
+                                          style: AppTextStyles.caption.copyWith(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
+                                            color: LightColors.textTertiary,
+                                          ),
+                                        ),
                                 ),
                               ),
                               if (index < _waypoints.length - 1)
                                 Expanded(
                                   child: Container(
                                     width: 2,
-                                    color: isPassed 
-                                        ? LightColors.successGreen 
+                                    color: isPassed
+                                        ? LightColors.successGreen
                                         : LightColors.divider,
                                   ),
                                 ),
@@ -456,21 +662,24 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 14),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         wp.name,
-                                        style: AppTextStyles.bodyMedium.copyWith(
-                                          color: isActive 
-                                              ? LightColors.textPrimary 
-                                              : LightColors.textSecondary,
-                                          fontWeight: isActive 
-                                              ? FontWeight.w800 
-                                              : FontWeight.w600,
-                                        ),
+                                        style: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: isActive
+                                                  ? LightColors.textPrimary
+                                                  : LightColors.textSecondary,
+                                              fontWeight: isActive
+                                                  ? FontWeight.w800
+                                                  : FontWeight.w600,
+                                            ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
@@ -484,7 +693,10 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
                                   ),
                                   if (isActive)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: LightColors.primaryLight,
                                         borderRadius: BorderRadius.circular(6),
@@ -537,9 +749,15 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
                       backgroundColor: Colors.white,
                       foregroundColor: LightColors.summitDark,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                    icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                    icon: Icon(
+                      _isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                    ),
                     label: Text(
                       _isPlaying ? 'Pause Tracker' : 'Start Simulation',
                       style: AppTextStyles.button.copyWith(
@@ -569,15 +787,33 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
                     ),
                   ),
                   itemBuilder: (context) => [
-                    const PopupMenuItem(value: 1, child: Text('Normal (1x)', style: TextStyle(color: Colors.white))),
-                    const PopupMenuItem(value: 2, child: Text('Fast (2x)', style: TextStyle(color: Colors.white))),
-                    const PopupMenuItem(value: 5, child: Text('Blitz (5x)', style: TextStyle(color: Colors.white))),
+                    const PopupMenuItem(
+                      value: 1,
+                      child: Text(
+                        'Normal (1x)',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 2,
+                      child: Text(
+                        'Fast (2x)',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 5,
+                      child: Text(
+                        'Blitz (5x)',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 120),
         ],
       ),
     );
@@ -673,7 +909,8 @@ class _TrailMapPainter extends CustomPainter {
     Offset getOffset(Waypoint wp) {
       // Norm coordinates to [0,1]
       final normX = (wp.lng - minLng) / lngSpan;
-      final normY = 1.0 - ((wp.lat - minLat) / latSpan); // Flutter Y is downwards
+      final normY =
+          1.0 - ((wp.lat - minLat) / latSpan); // Flutter Y is downwards
       return Offset(margin + normX * plotWidth, margin + normY * plotHeight);
     }
 
@@ -748,6 +985,7 @@ class _TrailMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TrailMapPainter oldDelegate) {
-    return oldDelegate.currentIndex != currentIndex || oldDelegate.lerpProgress != lerpProgress;
+    return oldDelegate.currentIndex != currentIndex ||
+        oldDelegate.lerpProgress != lerpProgress;
   }
 }
