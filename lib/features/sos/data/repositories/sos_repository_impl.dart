@@ -105,4 +105,29 @@ class SosRepositoryImpl implements SosRepository {
     }).toList();
     await _prefs.setStringList(_queueKey, list);
   }
+
+  @override
+  Future<List<SosAlert>> getMySosAlerts() async {
+    final response = await _apiClient.get(ApiEndpoints.sosHistory);
+    final Map<String, dynamic> payload = response.data is Map ? Map<String, dynamic>.from(response.data) : {};
+    final dataList = payload['data'];
+
+    if (dataList is List) {
+      return dataList.map((data) {
+        return SosAlert(
+          id: data['_id']?.toString() ?? data['id']?.toString(),
+          userId: data['user_id']?.toString() ?? '',
+          latitude: (data['latitude'] as num).toDouble(),
+          longitude: (data['longitude'] as num).toDouble(),
+          altitude: data['altitude'] != null ? (data['altitude'] as num).toDouble() : null,
+          batteryLevel: data['battery_level'] != null ? (data['battery_level'] as num).toDouble() : null,
+          status: data['status']?.toString() ?? 'pending',
+          message: data['message']?.toString(),
+          createdAt: data['createdAt'] != null ? DateTime.parse(data['createdAt'].toString()) : DateTime.now(),
+          isSynced: true,
+        );
+      }).toList();
+    }
+    return [];
+  }
 }

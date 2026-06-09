@@ -39,6 +39,11 @@ final sosViewModelProvider = NotifierProvider<SosNotifier, SosState>(() {
   return SosNotifier();
 });
 
+final sosHistoryProvider = FutureProvider<List<SosAlert>>((ref) async {
+  final repository = ref.watch(sosRepositoryProvider);
+  return repository.getMySosAlerts();
+});
+
 class SosNotifier extends Notifier<SosState> {
   Timer? _syncTimer;
 

@@ -5,4 +5,5 @@ abstract class SosRepository {
   Future<List<SosAlert>> getQueuedAlerts();
   Future<void> saveAlertLocally(SosAlert alert);
   Future<void> deleteAlertLocally(String timestampKey);
+  Future<List<SosAlert>> getMySosAlerts();
 }
