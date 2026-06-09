@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:path_app/features/auth/presentation/screens/register_screen.dart';
+import 'package:path_app/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:path_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:path_app/features/map_weather/presentation/screens/map_weather_screen.dart';
 import 'package:path_app/features/navigation/presentation/screens/main_navigation_shell.dart';
@@ -37,6 +38,12 @@ class AppRouter {
         path: '/register',
         builder: (BuildContext context, GoRouterState state) {
           return const RegisterScreen();
+        },
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (BuildContext context, GoRouterState state) {
+          return const ForgotPasswordScreen();
         },
       ),
       StatefulShellRoute.indexedStack(

@@ -15,7 +15,7 @@ class AnimatedStatCounter extends StatefulWidget {
   final TextStyle? labelStyle;
 
   const AnimatedStatCounter({
-    Key? key,
+    super.key,
     required this.finalValue,
     required this.label,
     this.suffix = '',
@@ -23,7 +23,7 @@ class AnimatedStatCounter extends StatefulWidget {
     this.duration = const Duration(milliseconds: 1500),
     this.valueStyle,
     this.labelStyle,
-  }) : super(key: key);
+  });
 
   @override
   State<AnimatedStatCounter> createState() => _AnimatedStatCounterState();
@@ -37,15 +37,12 @@ class _AnimatedStatCounterState extends State<AnimatedStatCounter>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: widget.duration,
-      vsync: this,
-    );
+    _controller = AnimationController(duration: widget.duration, vsync: this);
 
-    _countAnimation =
-        IntTween(begin: 0, end: widget.finalValue).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _countAnimation = IntTween(
+      begin: 0,
+      end: widget.finalValue,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _controller.forward();
   }
@@ -77,7 +74,8 @@ class _AnimatedStatCounterState extends State<AnimatedStatCounter>
           builder: (context, child) {
             return Text(
               '${_countAnimation.value}${widget.suffix}',
-              style: widget.valueStyle ??
+              style:
+                  widget.valueStyle ??
                   AppTextStyles.h2.copyWith(
                     color: widget.accentColor,
                     fontWeight: FontWeight.w700,
@@ -88,7 +86,8 @@ class _AnimatedStatCounterState extends State<AnimatedStatCounter>
         SizedBox(height: Spacing.xs),
         Text(
           widget.label,
-          style: widget.labelStyle ??
+          style:
+              widget.labelStyle ??
               AppTextStyles.bodyMedium.copyWith(
                 color: LightColors.textSecondary,
               ),

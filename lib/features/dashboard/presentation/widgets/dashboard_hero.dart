@@ -12,12 +12,12 @@ class DashboardHero extends StatelessWidget {
   final VoidCallback? onActionTap;
 
   const DashboardHero({
-    Key? key,
+    super.key,
     this.greeting = 'Ready to Trek?',
     this.subtitle = 'Your next adventure awaits',
     this.actionButton,
     this.onActionTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +49,7 @@ class DashboardHero extends StatelessWidget {
             ),
           ),
           SizedBox(height: Spacing.lg),
-          if (actionButton != null) actionButton!,
+          ?actionButton,
         ],
       ),
     );

@@ -12,13 +12,13 @@ class QuickActionCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const QuickActionCard({
-    Key? key,
+    super.key,
     required this.icon,
     required this.title,
     required this.description,
     required this.accentColor,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +28,7 @@ class QuickActionCard extends StatelessWidget {
         padding: EdgeInsets.all(Spacing.lg),
         decoration: BoxDecoration(
           color: LightColors.surfaceWhite,
-          border: Border.all(
-            color: LightColors.dividerLight,
-            width: 1,
-          ),
+          border: Border.all(color: LightColors.dividerLight, width: 1),
           borderRadius: BorderRadius.circular(Radius.lg),
           boxShadow: AppShadows.subtle,
         ),
@@ -80,12 +77,12 @@ class QuickActionsGrid extends StatelessWidget {
   final VoidCallback onViewProfile;
 
   const QuickActionsGrid({
-    Key? key,
+    super.key,
     required this.onExploreTreks,
     required this.onViewSaved,
     required this.onCreateItinerary,
     required this.onViewProfile,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

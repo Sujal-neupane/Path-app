@@ -9,78 +9,63 @@
 /// - Responsive breakpoints
 ///
 /// Every UI element should reference these tokens instead of hardcoding values.
+library;
 
 import 'package:flutter/material.dart';
 
 /// Spacing scale: 4px base unit, 11 levels
 /// Use: Padding, margins, gaps, insets
 class Spacing {
-  static const double xs = 4.0;      // Micro spacing
-  static const double sm = 8.0;      // Small
-  static const double md = 12.0;     // Medium (default)
-  static const double lg = 16.0;     // Large
-  static const double xl = 20.0;     // Extra large
-  static const double xxl = 24.0;    // Double extra large
-  static const double xxxl = 32.0;   // Triple extra large
-  static const double huge = 40.0;   // Huge
-  static const double massive = 48.0;// Massive
-  static const double colossal = 56.0;// Colossal (common touch target)
-  static const double giant = 64.0;   // Giant
+  static const double xs = 4.0; // Micro spacing
+  static const double sm = 8.0; // Small
+  static const double md = 12.0; // Medium (default)
+  static const double lg = 16.0; // Large
+  static const double xl = 20.0; // Extra large
+  static const double xxl = 24.0; // Double extra large
+  static const double xxxl = 32.0; // Triple extra large
+  static const double huge = 40.0; // Huge
+  static const double massive = 48.0; // Massive
+  static const double colossal = 56.0; // Colossal (common touch target)
+  static const double giant = 64.0; // Giant
 
   // Common combinations
-  static const double horizontalPadding = lg;   // 16px
-  static const double verticalPadding = lg;     // 16px
-  static const double cardPadding = xl;         // 20px
-  static const double sectionSpacing = xl;      // 20px between sections
-  static const double itemSpacing = md;         // 12px between list items
+  static const double horizontalPadding = lg; // 16px
+  static const double verticalPadding = lg; // 16px
+  static const double cardPadding = xl; // 20px
+  static const double sectionSpacing = xl; // 20px between sections
+  static const double itemSpacing = md; // 12px between list items
 }
 
 /// Border radius scale
 class Radius {
-  static const double xs = 4.0;       // Minimal rounding
-  static const double sm = 8.0;       // Small
-  static const double md = 12.0;      // Medium (default)
-  static const double lg = 16.0;      // Large
-  static const double xl = 20.0;      // Extra large
-  static const double full = 999.0;   // Circular
+  static const double xs = 4.0; // Minimal rounding
+  static const double sm = 8.0; // Small
+  static const double md = 12.0; // Medium (default)
+  static const double lg = 16.0; // Large
+  static const double xl = 20.0; // Extra large
+  static const double full = 999.0; // Circular
 }
 
 /// Shadow system - elevation-based shadows for depth
 class AppShadows {
   // Subtle shadows (1-3 elevation)
   static const List<BoxShadow> subtle = [
-    BoxShadow(
-      color: Color(0x0F000000),
-      offset: Offset(0, 1),
-      blurRadius: 2.0,
-    )
+    BoxShadow(color: Color(0x0F000000), offset: Offset(0, 1), blurRadius: 2.0),
   ];
 
   // Medium shadows (4-6 elevation)
   static const List<BoxShadow> medium = [
-    BoxShadow(
-      color: Color(0x1F000000),
-      offset: Offset(0, 2),
-      blurRadius: 4.0,
-    )
+    BoxShadow(color: Color(0x1F000000), offset: Offset(0, 2), blurRadius: 4.0),
   ];
 
   // Strong shadows (8+ elevation)
   static const List<BoxShadow> strong = [
-    BoxShadow(
-      color: Color(0x2F000000),
-      offset: Offset(0, 4),
-      blurRadius: 8.0,
-    )
+    BoxShadow(color: Color(0x2F000000), offset: Offset(0, 4), blurRadius: 8.0),
   ];
 
   // Extra strong for modals
   static const List<BoxShadow> extraStrong = [
-    BoxShadow(
-      color: Color(0x3F000000),
-      offset: Offset(0, 8),
-      blurRadius: 16.0,
-    )
+    BoxShadow(color: Color(0x3F000000), offset: Offset(0, 8), blurRadius: 16.0),
   ];
 
   // Pressed state (inset shadow effect)
@@ -90,7 +75,7 @@ class AppShadows {
       offset: Offset(0, 1),
       blurRadius: 1.0,
       spreadRadius: -1.0,
-    )
+    ),
   ];
 }
 
@@ -275,26 +260,34 @@ class Elevation {
 /// Semantic spacings - commonly used combinations
 class SemanticSpacing {
   // Page/screen level spacing
-  static const EdgeInsets pageHorizontal =
-      EdgeInsets.symmetric(horizontal: Spacing.lg);
-  static const EdgeInsets pageVertical =
-      EdgeInsets.symmetric(vertical: Spacing.lg);
+  static const EdgeInsets pageHorizontal = EdgeInsets.symmetric(
+    horizontal: Spacing.lg,
+  );
+  static const EdgeInsets pageVertical = EdgeInsets.symmetric(
+    vertical: Spacing.lg,
+  );
   static const EdgeInsets pagePadding = EdgeInsets.all(Spacing.lg);
 
   // Card level spacing
   static const EdgeInsets cardPadding = EdgeInsets.all(Spacing.xl);
-  static const EdgeInsets cardHorizontal =
-      EdgeInsets.symmetric(horizontal: Spacing.xl);
-  static const EdgeInsets cardVertical =
-      EdgeInsets.symmetric(vertical: Spacing.xl);
+  static const EdgeInsets cardHorizontal = EdgeInsets.symmetric(
+    horizontal: Spacing.xl,
+  );
+  static const EdgeInsets cardVertical = EdgeInsets.symmetric(
+    vertical: Spacing.xl,
+  );
 
   // List item spacing
-  static const EdgeInsets listItemHorizontal =
-      EdgeInsets.symmetric(horizontal: Spacing.lg);
-  static const EdgeInsets listItemVertical =
-      EdgeInsets.symmetric(vertical: Spacing.md);
-  static const EdgeInsets listItemPadding =
-      EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.md);
+  static const EdgeInsets listItemHorizontal = EdgeInsets.symmetric(
+    horizontal: Spacing.lg,
+  );
+  static const EdgeInsets listItemVertical = EdgeInsets.symmetric(
+    vertical: Spacing.md,
+  );
+  static const EdgeInsets listItemPadding = EdgeInsets.symmetric(
+    horizontal: Spacing.lg,
+    vertical: Spacing.md,
+  );
 
   // Component spacing
   static const EdgeInsets componentSmall = EdgeInsets.all(Spacing.sm);
@@ -304,10 +297,10 @@ class SemanticSpacing {
 
 /// Line height scale for typography
 class LineHeight {
-  static const double tight = 1.2;      // Headings
-  static const double normal = 1.4;     // Body (default)
-  static const double relaxed = 1.5;    // Body large
-  static const double loose = 1.6;      // Captions
+  static const double tight = 1.2; // Headings
+  static const double normal = 1.4; // Body (default)
+  static const double relaxed = 1.5; // Body large
+  static const double loose = 1.6; // Captions
 }
 
 /// Common border decorations

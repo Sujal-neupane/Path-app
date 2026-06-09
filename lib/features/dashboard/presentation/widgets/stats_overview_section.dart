@@ -12,12 +12,12 @@ class StatsOverviewSection extends StatelessWidget {
   final Duration? animationDuration;
 
   const StatsOverviewSection({
-    Key? key,
+    super.key,
     required this.totalTreks,
     required this.totalElevationM,
     required this.totalDays,
     this.animationDuration,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -97,12 +97,12 @@ class PersonalRecordsCard extends StatelessWidget {
   final VoidCallback? onViewAll;
 
   const PersonalRecordsCard({
-    Key? key,
+    super.key,
     this.highestAltitude,
     this.longestDistance,
     this.fastestDayElevation,
     this.onViewAll,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

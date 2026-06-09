@@ -125,6 +125,40 @@ class AuthViewModel extends Notifier<AuthState> {
     }
   }
 
+  Future<String?> requestPasswordReset(String email) async {
+    state = AuthLoading();
+    try {
+      final repository = await ref.read(authRepositoryProvider.future);
+      final token = await repository.requestPasswordReset(email);
+      state = AuthInitial();
+      return token;
+    } catch (e) {
+      state = AuthError(
+        _extractUserMessage(e, 'Failed to request password reset. Please try again.'),
+      );
+      return null;
+    }
+  }
+
+  Future<bool> resetPassword(
+    String email,
+    String token,
+    String newPassword,
+  ) async {
+    state = AuthLoading();
+    try {
+      final repository = await ref.read(authRepositoryProvider.future);
+      await repository.resetPassword(email, token, newPassword);
+      state = AuthSuccess();
+      return true;
+    } catch (e) {
+      state = AuthError(
+        _extractUserMessage(e, 'Failed to reset password. Please check your token.'),
+      );
+      return false;
+    }
+  }
+
   // ── Private Validation Logic ──
 
   String? _getFieldError(String fieldName, String value) {

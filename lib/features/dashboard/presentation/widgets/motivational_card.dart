@@ -11,12 +11,12 @@ class MotivationalCard extends StatelessWidget {
   final Color accentColor;
 
   const MotivationalCard({
-    Key? key,
+    super.key,
     required this.message,
     required this.subMessage,
     this.icon = Icons.favorite_rounded,
     this.accentColor = LightColors.sosRed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

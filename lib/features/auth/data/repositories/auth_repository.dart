@@ -88,8 +88,8 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> requestPasswordReset(String email) async {
-    await _remoteDatasource.requestPasswordReset(email);
+  Future<String?> requestPasswordReset(String email) async {
+    return _remoteDatasource.requestPasswordReset(email);
   }
 
   @override

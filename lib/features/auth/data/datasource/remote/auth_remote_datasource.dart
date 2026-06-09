@@ -36,7 +36,7 @@ abstract class AuthRemoteDatasource {
   });
 
   Future<AuthApiModel> getUserById(String userId);
-  Future<void> requestPasswordReset(String email);
+  Future<String?> requestPasswordReset(String email);
   Future<void> resetPassword(String email, String token, String newPassword);
 }
 
@@ -104,7 +104,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDatasource {
   }
 
   @override
-  Future<void> requestPasswordReset(String email) async {
+  Future<String?> requestPasswordReset(String email) async {
     final response = await _apiClient.post(
       ApiEndpoints.requestPasswordReset,
       data: {'email': email},
@@ -113,6 +113,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDatasource {
     if (response.statusCode != 200) {
       throw Exception(_message(payload, 'Failed to request password reset'));
     }
+    return payload['resetToken']?.toString();
   }
 
   @override
