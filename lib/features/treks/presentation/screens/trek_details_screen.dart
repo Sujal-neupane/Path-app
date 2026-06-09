@@ -298,6 +298,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                                         : LightColors.forestPrimary,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
+                                    minimumSize: const Size(0, 40),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
