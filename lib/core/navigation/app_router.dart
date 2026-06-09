@@ -5,6 +5,7 @@ import 'package:path_app/features/auth/presentation/screens/register_screen.dart
 import 'package:path_app/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:path_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:path_app/features/map_weather/presentation/screens/map_weather_screen.dart';
+import 'package:path_app/features/map_weather/presentation/screens/trail_navigator_screen.dart';
 import 'package:path_app/features/navigation/presentation/screens/main_navigation_shell.dart';
 import 'package:path_app/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:path_app/features/profile/presentation/screens/profile_screen.dart';
@@ -87,6 +88,15 @@ class AppRouter {
                 builder: (BuildContext context, GoRouterState state) {
                   return const MapWeatherScreen();
                 },
+                routes: [
+                  GoRoute(
+                    path: 'navigator',
+                    builder: (BuildContext context, GoRouterState state) {
+                      final region = state.extra as String? ?? 'Everest';
+                      return TrailNavigatorScreen(region: region);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
