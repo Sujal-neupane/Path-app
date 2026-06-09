@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_app/core/components/clay_container.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
 import 'package:path_app/features/auth/presentation/state/auth_state.dart';
@@ -200,157 +201,156 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               ).animate(_formFade),
               child: FadeTransition(
                 opacity: _formFade,
-                child: Container(
-                  height: size.height * 0.70,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(36),
-                      topRight: Radius.circular(36),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 40,
-                        offset: const Offset(0, -8),
-                      ),
-                    ],
+                child: ClayContainer(
+                  depth: 8,
+                  spread: 4,
+                  borderRadius: 36,
+                  color: Colors.white,
+                  padding: EdgeInsets.zero,
+                  customBorderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(36),
+                    topRight: Radius.circular(36),
                   ),
-                  child: Column(
-                    children: [
-                      // Progress bar
-                      _buildProgressBar(),
+                  child: SizedBox(
+                    height: size.height * 0.70,
+                    child: Column(
+                      children: [
+                        // Progress bar
+                        _buildProgressBar(),
 
-                      // Scrollable form
-                      Expanded(
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: EdgeInsets.fromLTRB(
-                            28,
-                            24,
-                            28,
-                            20 + bottomPadding,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Step title
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                child: Column(
-                                  key: ValueKey(_currentStep),
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _currentStep == 0
-                                          ? 'Create Your\nAccount'
-                                          : 'Almost\nThere',
-                                      style: AppTextStyles.h1.copyWith(
-                                        color: const Color(0xFF1A1A1A),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _currentStep == 0
-                                          ? 'Start with your name and email.'
-                                          : 'Add your phone and set a password.',
-                                      style: AppTextStyles.bodyLarge.copyWith(
-                                        color: const Color(0xFF999999),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 28),
-
-                              // ── Step Content ──
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 350),
-                                switchInCurve: Curves.easeOutCubic,
-                                switchOutCurve: Curves.easeIn,
-                                transitionBuilder: (child, animation) {
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: SlideTransition(
-                                      position: Tween<Offset>(
-                                        begin: Offset(
-                                          _currentStep == 1 ? 0.1 : -0.1,
-                                          0,
-                                        ),
-                                        end: Offset.zero,
-                                      ).animate(animation),
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                                child: _currentStep == 0
-                                    ? _buildStep1(authState)
-                                    : _buildStep2(authState),
-                              ),
-                              const SizedBox(height: 28),
-
-                              // ── Error Message ──
-                              if (authState is AuthError)
-                                _buildErrorBanner(authState.message),
-
-                              // ── Action Button ──
-                              SummitButton(
-                                label: _currentStep == 0
-                                    ? 'CONTINUE'
-                                    : 'CREATE ACCOUNT',
-                                isLoading: authState is AuthLoading,
-                                isSuccess: authState is AuthSuccess,
-                                onPressed: _currentStep == 0
-                                    ? _goToStep2
-                                    : () => _handleRegister(),
-                              ),
-                              const SizedBox(height: 20),
-
-                              // ── Bottom Links ──
-                              if (_currentStep == 0)
-                                Center(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                        // Scrollable form
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            padding: EdgeInsets.fromLTRB(
+                              28,
+                              24,
+                              28,
+                              20 + bottomPadding,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Step title
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: Column(
+                                    key: ValueKey(_currentStep),
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        'Already have an account? ',
-                                        style: TextStyle(
-                                          color: Color(0xFF999999),
-                                          fontSize: 14,
-                                          fontFamily: 'Inter',
+                                      Text(
+                                        _currentStep == 0
+                                            ? 'Create Your\nAccount'
+                                            : 'Almost\nThere',
+                                        style: AppTextStyles.h1.copyWith(
+                                          color: const Color(0xFF1A1A1A),
                                         ),
                                       ),
-                                      GestureDetector(
-                                        onTap: () => Navigator.pop(context),
-                                        child: const Text(
-                                          'Sign In',
-                                          style: TextStyle(
-                                            color: Color(0xFF1A1A1A),
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 14,
-                                            fontFamily: 'PlusJakartaSans',
-                                          ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _currentStep == 0
+                                            ? 'Start with your name and email.'
+                                            : 'Add your phone and set a password.',
+                                        style: AppTextStyles.bodyLarge.copyWith(
+                                          color: const Color(0xFF999999),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
+                                const SizedBox(height: 28),
 
-                              if (_currentStep == 1)
-                                Center(
-                                  child: Text(
-                                    'By creating an account, you agree to our Terms of Service.',
-                                    textAlign: TextAlign.center,
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: const Color(0xFFAAAAAA),
+                                // ── Step Content ──
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 350),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeIn,
+                                  transitionBuilder: (child, animation) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: SlideTransition(
+                                        position: Tween<Offset>(
+                                          begin: Offset(
+                                            _currentStep == 1 ? 0.1 : -0.1,
+                                            0,
+                                          ),
+                                          end: Offset.zero,
+                                        ).animate(animation),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: _currentStep == 0
+                                      ? _buildStep1(authState)
+                                      : _buildStep2(authState),
+                                ),
+                                const SizedBox(height: 28),
+
+                                // ── Error Message ──
+                                if (authState is AuthError)
+                                  _buildErrorBanner(authState.message),
+
+                                // ── Action Button ──
+                                SummitButton(
+                                  label: _currentStep == 0
+                                      ? 'CONTINUE'
+                                      : 'CREATE ACCOUNT',
+                                  isLoading: authState is AuthLoading,
+                                  isSuccess: authState is AuthSuccess,
+                                  onPressed: _currentStep == 0
+                                      ? _goToStep2
+                                      : () => _handleRegister(),
+                                ),
+                                const SizedBox(height: 20),
+
+                                // ── Bottom Links ──
+                                if (_currentStep == 0)
+                                  Center(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Text(
+                                          'Already have an account? ',
+                                          style: TextStyle(
+                                            color: Color(0xFF999999),
+                                            fontSize: 14,
+                                            fontFamily: 'Inter',
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () => Navigator.pop(context),
+                                          child: const Text(
+                                            'Sign In',
+                                            style: TextStyle(
+                                              color: Color(0xFF1A1A1A),
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 14,
+                                              fontFamily: 'PlusJakartaSans',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                            ],
+
+                                if (_currentStep == 1)
+                                  Center(
+                                    child: Text(
+                                      'By creating an account, you agree to our Terms of Service.',
+                                      textAlign: TextAlign.center,
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: const Color(0xFFAAAAAA),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
