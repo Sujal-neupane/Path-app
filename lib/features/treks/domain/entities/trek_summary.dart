@@ -17,6 +17,20 @@ class TrekSummary {
   final List<String> itinerary;
   final List<ItineraryStep> detailedItinerary;
 
+  String get coverImageAsset {
+    final nameLower = name.toLowerCase();
+    if (nameLower.contains('everest')) {
+      return 'assets/images/everest_base_camp.png';
+    } else if (nameLower.contains('annapurna')) {
+      return 'assets/images/annapurna_circuit.png';
+    } else if (nameLower.contains('langtang')) {
+      return 'assets/images/langtang_valley.png';
+    } else if (nameLower.contains('poon') || nameLower.contains('ghorepani')) {
+      return 'assets/images/poon_hill.png';
+    }
+    return 'assets/images/logo.png';
+  }
+
   const TrekSummary({
     required this.id,
     required this.name,
@@ -51,10 +65,12 @@ class TrekSummary {
     // Parse checkpoints as detailed itinerary steps
     final checkpointsRaw = json['checkpoints'] as List<dynamic>? ?? [];
     final detailedSteps = checkpointsRaw
-        .where((cp) =>
-            cp is Map<String, dynamic> &&
-            cp['day'] != null &&
-            (cp['day'] as String).isNotEmpty)
+        .where(
+          (cp) =>
+              cp is Map<String, dynamic> &&
+              cp['day'] != null &&
+              (cp['day'] as String).isNotEmpty,
+        )
         .map((cp) => ItineraryStep.fromJson(cp as Map<String, dynamic>))
         .toList();
 
@@ -71,11 +87,13 @@ class TrekSummary {
       bestSeason: json['best_season'] as String? ?? '',
       shortDescription: json['short_description'] as String? ?? '',
       longDescription: json['long_description'] as String? ?? '',
-      highlights: (json['highlights'] as List<dynamic>?)
+      highlights:
+          (json['highlights'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      itinerary: (json['itinerary_summary'] as List<dynamic>?)
+      itinerary:
+          (json['itinerary_summary'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
@@ -100,8 +118,7 @@ class TrekSummary {
       'long_description': longDescription,
       'highlights': highlights,
       'itinerary_summary': itinerary,
-      'checkpoints':
-          detailedItinerary.map((step) => step.toJson()).toList(),
+      'checkpoints': detailedItinerary.map((step) => step.toJson()).toList(),
     };
   }
 }

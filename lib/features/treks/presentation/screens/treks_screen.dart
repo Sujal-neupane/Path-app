@@ -132,103 +132,227 @@ class _TrekCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
         child: ClayContainer(
-          depth: 5,
-          spread: 2.5,
-          borderRadius: 22,
+          depth: 6,
+          spread: 3,
+          borderRadius: 24,
           color: Colors.white,
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      trek.name,
-                      style: AppTextStyles.h3.copyWith(
-                        color: LightColors.textPrimary,
-                        fontWeight: FontWeight.w700,
+              // Top Cover Image Banner with Overlays
+              SizedBox(
+                height: 160,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(24),
+                      ),
+                      child: Image.asset(
+                        trek.coverImageAsset,
+                        fit: BoxFit.cover,
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: difficultyColor.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Text(
-                      trek.difficulty,
-                      style: AppTextStyles.caption.copyWith(
-                        color: difficultyColor,
+                    // Gradient overlay for visual depth and contrast protection
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.35),
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.45),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                trek.shortDescription,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: LightColors.textSecondary,
+                    // Glassmorphic/Claymorphic Rating Badge
+                    Positioned(
+                      top: 14,
+                      left: 14,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: LightColors.peakAmber,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              trek.rating.toStringAsFixed(1),
+                              style: AppTextStyles.caption.copyWith(
+                                color: LightColors.textPrimary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Glassmorphic/Claymorphic Difficulty Badge
+                    Positioned(
+                      top: 14,
+                      right: 14,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: difficultyColor.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          trek.difficulty.toUpperCase(),
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _Pill(icon: Icons.landscape_rounded, text: trek.region),
-                  _Pill(
-                    icon: Icons.calendar_today_rounded,
-                    text: '${trek.durationDays} days',
-                  ),
-                  _Pill(
-                    icon: Icons.route_rounded,
-                    text: '${trek.distanceKm} km',
-                  ),
-                  _Pill(
-                    icon: Icons.terrain_rounded,
-                    text: '${trek.maxAltitudeM} m',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(
-                    Icons.star_rounded,
-                    size: 18,
-                    color: LightColors.peakAmber,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    trek.rating.toStringAsFixed(1),
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: LightColors.textPrimary,
-                      fontWeight: FontWeight.w700,
+
+              // Details section with generous spacing and strong scannability
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      trek.name,
+                      style: AppTextStyles.h2.copyWith(
+                        color: LightColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'View details',
-                    style: AppTextStyles.caption.copyWith(
-                      color: LightColors.forestPrimary,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(height: 4),
+                    // Region Sub-header
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_rounded,
+                          size: 14,
+                          color: LightColors.forestPrimary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${trek.region} Region',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: LightColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 16,
-                    color: LightColors.forestPrimary,
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    // Short Description
+                    Text(
+                      trek.shortDescription,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: LightColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    // Divider
+                    Container(
+                      height: 1.5,
+                      color: LightColors.dividerLight.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    // Row of stats & clean view detail arrow
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _CardMetric(
+                                icon: Icons.calendar_today_rounded,
+                                value: '${trek.durationDays} days',
+                                label: 'Duration',
+                              ),
+                              _CardMetric(
+                                icon: Icons.route_rounded,
+                                value: '${trek.distanceKm} km',
+                                label: 'Distance',
+                              ),
+                              _CardMetric(
+                                icon: Icons.terrain_rounded,
+                                value: '${trek.maxAltitudeM} m',
+                                label: 'Altitude',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: LightColors.primaryLight,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: LightColors.forestPrimary.withValues(
+                                  alpha: 0.1,
+                                ),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                            color: LightColors.forestPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -239,36 +363,54 @@ class _TrekCard extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────
-// Pill Badge Widget
+// Card Metric Column Widget
 // ──────────────────────────────────────────────
-class _Pill extends StatelessWidget {
+class _CardMetric extends StatelessWidget {
   final IconData icon;
-  final String text;
+  final String value;
+  final String label;
 
-  const _Pill({required this.icon, required this.text});
+  const _CardMetric({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: LightColors.primaryLight,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: LightColors.forestPrimary),
-          const SizedBox(width: 5),
-          Text(
-            text,
-            style: AppTextStyles.caption.copyWith(
-              color: LightColors.forestPrimary,
-              fontWeight: FontWeight.w600,
-            ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: LightColors.primaryLight,
+            shape: BoxShape.circle,
           ),
-        ],
-      ),
+          child: Icon(icon, size: 13, color: LightColors.forestPrimary),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: AppTextStyles.caption.copyWith(
+                color: LightColors.textPrimary,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+            Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: LightColors.textTertiary,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
