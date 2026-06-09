@@ -220,8 +220,6 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final activeWaypoint = _waypoints[_currentIndex];
-    
     return Scaffold(
       backgroundColor: LightColors.stoneWhite,
       appBar: AppBar(
