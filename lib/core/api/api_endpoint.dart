@@ -31,4 +31,10 @@ class ApiEndpoints {
   // Dashboard Endpoints
   static const String dashboardOverview = '/dashboard/overview';
 
+  // SOS Endpoint
+  static const String sosAlert = '/sos';
+
+  // Trek Endpoints
+  static const String treksList = '/treks';
+  static const String trekById = '/treks/{id}';
 }
