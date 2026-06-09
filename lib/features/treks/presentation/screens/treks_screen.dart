@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_app/core/components/clay_container.dart';
@@ -33,14 +34,62 @@ class TreksScreen extends ConsumerWidget {
 // ──────────────────────────────────────────────
 // Trek List (Data loaded successfully)
 // ──────────────────────────────────────────────
-class _TreksListView extends StatelessWidget {
+class _TreksListView extends StatefulWidget {
   final List<TrekSummary> treks;
 
   const _TreksListView({required this.treks});
 
   @override
+  State<_TreksListView> createState() => _TreksListViewState();
+}
+
+class _TreksListViewState extends State<_TreksListView> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedDifficulty = 'All';
+
+  final List<String> _difficulties = ['All', 'Easy', 'Moderate', 'Challenging', 'Extreme'];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<TrekSummary> get _filteredTreks {
+    return widget.treks.where((trek) {
+      final query = _searchQuery.toLowerCase().trim();
+      final matchesSearch = query.isEmpty ||
+          trek.name.toLowerCase().contains(query) ||
+          trek.region.toLowerCase().contains(query) ||
+          trek.shortDescription.toLowerCase().contains(query);
+
+      // Matches mapped labels like 'Easy', 'Moderate', 'Challenging', 'Extreme'
+      final matchesDifficulty = _selectedDifficulty == 'All' ||
+          trek.difficulty.toLowerCase() == _selectedDifficulty.toLowerCase();
+
+      return matchesSearch && matchesDifficulty;
+    }).toList();
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+    });
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+      _selectedDifficulty = 'All';
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (treks.isEmpty) {
+    if (widget.treks.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -69,12 +118,14 @@ class _TreksListView extends StatelessWidget {
       );
     }
 
+    final filtered = _filteredTreks;
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -85,27 +136,170 @@ class _TreksListView extends StatelessWidget {
                     fontSize: 30,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
                   'Handpicked routes for your next mountain story.',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: LightColors.textSecondary,
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // Claymorphic Search Bar
+                ClayContainer(
+                  borderRadius: 16,
+                  depth: 4,
+                  spread: 2,
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.search_rounded,
+                        color: LightColors.forestPrimary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (val) {
+                            setState(() {
+                              _searchQuery = val;
+                            });
+                          },
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: LightColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Search by name, region...',
+                            hintStyle: AppTextStyles.bodyMedium.copyWith(
+                              color: LightColors.textTertiary,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      if (_searchQuery.isNotEmpty)
+                        GestureDetector(
+                          onTap: _clearSearch,
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: LightColors.textSecondary,
+                            size: 18,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Difficulty Filter Row
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: _difficulties.map((diff) {
+                      final isSelected = _selectedDifficulty == diff;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 10, bottom: 6, top: 4),
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() {
+                              _selectedDifficulty = diff;
+                            });
+                          },
+                          child: ClayContainer(
+                            borderRadius: 12,
+                            depth: isSelected ? 2 : 5,
+                            spread: isSelected ? 1 : 2,
+                            isFlat: isSelected,
+                            color: isSelected ? LightColors.meadowTint : Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            child: Text(
+                              diff,
+                              style: AppTextStyles.button.copyWith(
+                                color: isSelected
+                                    ? LightColors.primaryFocus
+                                    : LightColors.textSecondary,
+                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               ],
             ),
           ),
         ),
-        SliverList.builder(
-          itemCount: treks.length,
-          itemBuilder: (context, index) {
-            final trek = treks[index];
-            return _TrekCard(
-              trek: trek,
-              onTap: () => context.push('/treks/${trek.id}'),
-            );
-          },
-        ),
+        if (filtered.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.filter_list_off_rounded,
+                    size: 56,
+                    color: LightColors.textTertiary.withValues(alpha: 0.4),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Matching Trails',
+                    style: AppTextStyles.h3.copyWith(
+                      color: LightColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try adjusting your search query or selecting a different difficulty level.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: LightColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: _resetFilters,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: LightColors.forestPrimary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Reset Filters'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          SliverList.builder(
+            itemCount: filtered.length,
+            itemBuilder: (context, index) {
+              final trek = filtered[index];
+              return _TrekCard(
+                trek: trek,
+                onTap: () => context.push('/treks/${trek.id}'),
+              );
+            },
+          ),
         const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
     );

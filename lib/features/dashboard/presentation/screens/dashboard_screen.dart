@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
@@ -10,6 +11,7 @@ import 'package:path_app/features/dashboard/presentation/viewmodels/dashboard_vi
 import 'package:path_app/features/dashboard/presentation/widgets/featured_trek_carousel.dart';
 import 'package:path_app/features/dashboard/presentation/widgets/weather_glance_widget.dart';
 import 'package:path_app/features/treks/domain/entities/trek_summary.dart';
+import 'package:path_app/features/treks/domain/entities/waypoint.dart';
 import 'package:path_app/features/treks/presentation/viewmodels/trek_viewmodel.dart';
 import 'package:path_app/core/components/clay_container.dart';
 import 'package:path_app/features/sos/presentation/viewmodels/sos_viewmodel.dart';
@@ -41,18 +43,21 @@ class DashboardScreen extends ConsumerWidget {
         final treksAsync = ref.watch(trekListProvider);
 
         return switch ((overviewAsync, treksAsync)) {
-          (AsyncData<DashboardOverview> overviewData, AsyncData<List<TrekSummary>> treksData) =>
+          (
+            AsyncData<DashboardOverview> overviewData,
+            AsyncData<List<TrekSummary>> treksData,
+          ) =>
             _DashboardBody(
               overview: overviewData.value,
               featuredTreks: treksData.value.take(5).toList(),
             ),
           (AsyncError(), _) || (_, AsyncError()) => _CenteredError(
-              label: 'Failed to load dashboard content.',
-              onRetry: () {
-                ref.invalidate(dashboardOverviewProvider);
-                ref.invalidate(trekListProvider);
-              },
-            ),
+            label: 'Failed to load dashboard content.',
+            onRetry: () {
+              ref.invalidate(dashboardOverviewProvider);
+              ref.invalidate(trekListProvider);
+            },
+          ),
           _ => const _CenteredLoading(label: 'Loading your expedition data...'),
         };
       },
@@ -67,19 +72,86 @@ class _DashboardBody extends ConsumerWidget {
   final DashboardOverview overview;
   final List<TrekSummary> featuredTreks;
 
-  const _DashboardBody({
-    required this.overview,
-    required this.featuredTreks,
-  });
+  const _DashboardBody({required this.overview, required this.featuredTreks});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final progressPercent = (overview.expedition.progress * 100).clamp(0, 100).toInt();
+    final activeState = ref.watch(activeTrekProvider);
+    final isTracking =
+        activeState.region != null && activeState.region!.isNotEmpty;
+
     final focusTasks = overview.tasks.take(3).toList();
-    final topInsight = overview.insights.isNotEmpty ? overview.insights.first : null;
+    final topInsight = overview.insights.isNotEmpty
+        ? overview.insights.first
+        : null;
 
     final sosState = ref.watch(sosViewModelProvider);
     final queuedCount = sosState.queuedAlerts.length;
+
+    // Resolve details if active
+    String heroTitle = 'Start an Expedition';
+    String heroSubtitle =
+        'No active tracking session. Discover trails and start your journey!';
+    String heroStatus = 'INACTIVE';
+    int progressPercent = 0;
+    VoidCallback onHeroTap = () => context.go('/treks');
+    VoidCallback? onHeroSecondaryTap;
+    String heroButtonLabel = 'Explore Available Treks';
+    String? heroSecondaryButtonLabel;
+
+    String distanceValue = '0.0 km';
+    String ascentValue = '+0 m';
+    String etaValue = '--';
+
+    if (isTracking) {
+      heroTitle = activeState.region!;
+      heroStatus = activeState.isFinished ? 'COMPLETED' : 'SIMULATOR LIVE';
+
+      final waypoints = getWaypointsForRegion(activeState.region!);
+      final totalWps = activeState.totalCheckpoints > 0
+          ? activeState.totalCheckpoints
+          : waypoints.length;
+      final curIdx = activeState.currentCheckpointIndex;
+
+      progressPercent = (totalWps > 1)
+          ? (curIdx / (totalWps - 1) * 100).clamp(0, 100).toInt()
+          : 0;
+
+      if (waypoints.isNotEmpty) {
+        if (curIdx < waypoints.length - 1) {
+          heroSubtitle =
+              'Day ${curIdx + 1} • ${waypoints[curIdx].name} to ${waypoints[curIdx + 1].name}';
+        } else {
+          heroSubtitle =
+              'Day ${curIdx + 1} • Destination Reached at ${waypoints.last.name}';
+        }
+
+        // Ascent gain: current altitude minus starting altitude
+        if (activeState.currentAltitude != null) {
+          final startAlt = waypoints.first.alt;
+          final diff = (activeState.currentAltitude! - startAlt)
+              .clamp(0.0, 10000.0)
+              .round();
+          ascentValue = '+$diff m';
+        }
+      } else {
+        heroSubtitle = 'Day ${curIdx + 1} • Tracking coordinates live';
+      }
+
+      distanceValue = '${activeState.distanceWalkedKm.toStringAsFixed(1)} km';
+      etaValue = activeState.isFinished
+          ? 'Finished'
+          : 'Day ${curIdx + 1} • Active';
+      heroButtonLabel = 'Resume Tracker';
+      onHeroTap = () =>
+          context.push('/map-weather/navigator', extra: activeState.region);
+
+      heroSecondaryButtonLabel = 'Stop Tracker';
+      onHeroSecondaryTap = () {
+        HapticFeedback.mediumImpact();
+        ref.read(activeTrekProvider.notifier).clearTrek();
+      };
+    }
 
     return Scaffold(
       backgroundColor: LightColors.stoneWhite,
@@ -124,10 +196,17 @@ class _DashboardBody extends ConsumerWidget {
                       borderRadius: 16,
                       depth: 4,
                       isDark: true,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
-                          const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
+                          const Icon(
+                            Icons.wifi_off_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -163,17 +242,14 @@ class _DashboardBody extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _ExpeditionHeroCard(
-                    title: overview.expedition.title.isNotEmpty
-                        ? overview.expedition.title
-                        : 'Everest Base Camp',
-                    subtitle: overview.expedition.subtitle.isNotEmpty
-                        ? overview.expedition.subtitle
-                        : 'Day 05 • Namche to Tengboche',
-                    status: overview.expedition.statusTag.isNotEmpty
-                        ? overview.expedition.statusTag
-                        : 'SYNC OK',
+                    title: heroTitle,
+                    subtitle: heroSubtitle,
+                    status: heroStatus,
                     progressPercent: progressPercent,
-                    onPlanTap: () => context.go('/treks'),
+                    onPlanTap: onHeroTap,
+                    buttonLabel: heroButtonLabel,
+                    onSecondaryTap: onHeroSecondaryTap,
+                    secondaryButtonLabel: heroSecondaryButtonLabel,
                   ),
                 ),
               ),
@@ -186,29 +262,32 @@ class _DashboardBody extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      Expanded(child: _MetricTile(
-                        icon: Icons.route_rounded,
-                        value: overview.expedition.distance.isNotEmpty
-                            ? overview.expedition.distance : '11.2 km',
-                        label: 'Distance',
-                        accentColor: LightColors.forestPrimary,
-                      )),
+                      Expanded(
+                        child: _MetricTile(
+                          icon: Icons.route_rounded,
+                          value: distanceValue,
+                          label: 'Distance',
+                          accentColor: LightColors.forestPrimary,
+                        ),
+                      ),
                       const SizedBox(width: 10),
-                      Expanded(child: _MetricTile(
-                        icon: Icons.trending_up_rounded,
-                        value: overview.expedition.ascent.isNotEmpty
-                            ? overview.expedition.ascent : '+780 m',
-                        label: 'Ascent',
-                        accentColor: LightColors.altitudeBlue,
-                      )),
+                      Expanded(
+                        child: _MetricTile(
+                          icon: Icons.trending_up_rounded,
+                          value: ascentValue,
+                          label: 'Ascent',
+                          accentColor: LightColors.altitudeBlue,
+                        ),
+                      ),
                       const SizedBox(width: 10),
-                      Expanded(child: _MetricTile(
-                        icon: Icons.schedule_rounded,
-                        value: overview.expedition.eta.isNotEmpty
-                            ? overview.expedition.eta : '5h 20m',
-                        label: 'ETA',
-                        accentColor: LightColors.peakAmber,
-                      )),
+                      Expanded(
+                        child: _MetricTile(
+                          icon: Icons.schedule_rounded,
+                          value: etaValue,
+                          label: 'ETA',
+                          accentColor: LightColors.peakAmber,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -231,21 +310,25 @@ class _DashboardBody extends ConsumerWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: _ActionTile(
-                            icon: Icons.terrain_rounded,
-                            title: 'Explore Treks',
-                            subtitle: 'Discover routes',
-                            accentColor: LightColors.forestPrimary,
-                            onTap: () => context.go('/treks'),
-                          )),
+                          Expanded(
+                            child: _ActionTile(
+                              icon: Icons.terrain_rounded,
+                              title: 'Explore Treks',
+                              subtitle: 'Discover routes',
+                              accentColor: LightColors.forestPrimary,
+                              onTap: () => context.go('/treks'),
+                            ),
+                          ),
                           const SizedBox(width: 10),
-                          Expanded(child: _ActionTile(
-                            icon: Icons.map_rounded,
-                            title: 'Map + Weather',
-                            subtitle: 'Trail conditions',
-                            accentColor: LightColors.altitudeBlue,
-                            onTap: () => context.go('/map-weather'),
-                          )),
+                          Expanded(
+                            child: _ActionTile(
+                              icon: Icons.map_rounded,
+                              title: 'Map + Weather',
+                              subtitle: 'Trail conditions',
+                              accentColor: LightColors.altitudeBlue,
+                              onTap: () => context.go('/map-weather'),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -385,6 +468,9 @@ class _ExpeditionHeroCard extends StatelessWidget {
   final String status;
   final int progressPercent;
   final VoidCallback onPlanTap;
+  final String buttonLabel;
+  final VoidCallback? onSecondaryTap;
+  final String? secondaryButtonLabel;
 
   const _ExpeditionHeroCard({
     required this.title,
@@ -392,6 +478,9 @@ class _ExpeditionHeroCard extends StatelessWidget {
     required this.status,
     required this.progressPercent,
     required this.onPlanTap,
+    required this.buttonLabel,
+    this.onSecondaryTap,
+    this.secondaryButtonLabel,
   });
 
   @override
@@ -437,7 +526,10 @@ class _ExpeditionHeroCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(20),
@@ -446,10 +538,15 @@ class _ExpeditionHeroCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 6, height: 6,
-                          decoration: const BoxDecoration(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: LightColors.successGreen,
+                            color: status.contains('LIVE')
+                                ? LightColors.peakAmber
+                                : status.contains('COMPLETED')
+                                ? LightColors.successGreen
+                                : LightColors.textTertiary,
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -499,31 +596,65 @@ class _ExpeditionHeroCard extends StatelessWidget {
                   value: progressPercent / 100,
                   minHeight: 8,
                   backgroundColor: Colors.white.withValues(alpha: 0.15),
-                  valueColor: const AlwaysStoppedAnimation<Color>(LightColors.peakAmber),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    LightColors.peakAmber,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              // CTA
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: onPlanTap,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: LightColors.summitDark,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              // CTA Buttons Row
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: onPlanTap,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: LightColors.summitDark,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        buttonLabel,
+                        style: AppTextStyles.button.copyWith(
+                          fontSize: 14,
+                          color: LightColors.summitDark,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                  child: Text(
-                    'Plan Next Move',
-                    style: AppTextStyles.button.copyWith(
-                      fontSize: 14,
-                      color: LightColors.summitDark,
+                  if (onSecondaryTap != null &&
+                      secondaryButtonLabel != null) ...[
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onSecondaryTap,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(
+                            color: Colors.white24,
+                            width: 1.5,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          secondaryButtonLabel!,
+                          style: AppTextStyles.button.copyWith(
+                            fontSize: 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -561,7 +692,8 @@ class _MetricTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 32, height: 32,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(9),
@@ -623,7 +755,8 @@ class _ActionTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 44, height: 44,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: accentColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(13),
@@ -660,11 +793,7 @@ class _SectionHeader extends StatelessWidget {
   final String? trailingText;
   final VoidCallback? onTap;
 
-  const _SectionHeader({
-    required this.title,
-    this.trailingText,
-    this.onTap,
-  });
+  const _SectionHeader({required this.title, this.trailingText, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -716,11 +845,17 @@ class _FocusChecklist extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: LightColors.successGreen, size: 20),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: LightColors.successGreen,
+              size: 20,
+            ),
             const SizedBox(width: 10),
             Text(
               'You are all set for today. Keep the momentum.',
-              style: AppTextStyles.bodyMedium.copyWith(color: LightColors.textSecondary),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: LightColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -735,43 +870,53 @@ class _FocusChecklist extends StatelessWidget {
         border: Border.all(color: LightColors.dividerLight),
       ),
       child: Column(
-        children: tasks.map((task) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                task.done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                size: 18,
-                color: task.done ? LightColors.successGreen : LightColors.textTertiary,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
+        children: tasks
+            .map(
+              (task) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      task.title,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: LightColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        decoration: task.done ? TextDecoration.lineThrough : null,
+                    Icon(
+                      task.done
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      size: 18,
+                      color: task.done
+                          ? LightColors.successGreen
+                          : LightColors.textTertiary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task.title,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: LightColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              decoration: task.done
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                          if (task.meta.isNotEmpty)
+                            Text(
+                              task.meta,
+                              style: AppTextStyles.caption.copyWith(
+                                color: LightColors.textSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    if (task.meta.isNotEmpty)
-                      Text(
-                        task.meta,
-                        style: AppTextStyles.caption.copyWith(
-                          color: LightColors.textSecondary,
-                          fontSize: 11,
-                        ),
-                      ),
                   ],
                 ),
               ),
-            ],
-          ),
-        )).toList(),
+            )
+            .toList(),
       ),
     );
   }
@@ -806,7 +951,8 @@ class _InsightCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 40, height: 40,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: LightColors.forestPrimary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
@@ -874,7 +1020,8 @@ class _CenteredLoading extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(
-              width: 36, height: 36,
+              width: 36,
+              height: 36,
               child: CircularProgressIndicator(
                 color: LightColors.forestPrimary,
                 strokeWidth: 3,
@@ -883,7 +1030,9 @@ class _CenteredLoading extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               label,
-              style: AppTextStyles.bodyMedium.copyWith(color: LightColors.textSecondary),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: LightColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -914,7 +1063,8 @@ class _CenteredError extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56, height: 56,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   color: LightColors.redLight,
                   borderRadius: BorderRadius.circular(16),
@@ -939,7 +1089,10 @@ class _CenteredError extends StatelessWidget {
                 onPressed: onRetry,
                 style: FilledButton.styleFrom(
                   backgroundColor: LightColors.forestPrimary,
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),

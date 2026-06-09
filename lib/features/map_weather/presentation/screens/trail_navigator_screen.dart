@@ -1,40 +1,26 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_app/core/components/clay_container.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
 import 'package:path_app/core/theme/light_colors.dart';
+import 'package:path_app/features/treks/domain/entities/waypoint.dart';
+import 'package:path_app/features/treks/presentation/viewmodels/trek_viewmodel.dart';
 
-class Waypoint {
-  final String name;
-  final double lat;
-  final double lng;
-  final double alt;
-  final String distance;
-
-  const Waypoint({
-    required this.name,
-    required this.lat,
-    required this.lng,
-    required this.alt,
-    required this.distance,
-  });
-}
-
-class TrailNavigatorScreen extends StatefulWidget {
+class TrailNavigatorScreen extends ConsumerStatefulWidget {
   final String region;
 
   const TrailNavigatorScreen({super.key, required this.region});
 
   @override
-  State<TrailNavigatorScreen> createState() => _TrailNavigatorScreenState();
+  ConsumerState<TrailNavigatorScreen> createState() => _TrailNavigatorScreenState();
 }
 
-class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
+class _TrailNavigatorScreenState extends ConsumerState<TrailNavigatorScreen> {
   late List<Waypoint> _waypoints;
   int _currentIndex = 0;
-  double _lerpProgress =
-      0.0; // From 0.0 to 1.0 between current and next waypoint
+  double _lerpProgress = 0.0; // From 0.0 to 1.0 between current and next waypoint
   bool _isPlaying = false;
   int _simulationSpeed = 1; // 1 = 1s, 2 = 500ms, 5 = 200ms
   Timer? _timer;
@@ -43,6 +29,12 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
   void initState() {
     super.initState();
     _loadWaypoints();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(activeTrekProvider.notifier).startTrek(
+        widget.region,
+        totalCheckpoints: _waypoints.length,
+      );
+    });
   }
 
   @override
@@ -52,197 +44,9 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
   }
 
   void _loadWaypoints() {
-    // High fidelity coordinate paths based on selected region
-    if (widget.region.contains('Annapurna')) {
-      _waypoints = const [
-        Waypoint(
-          name: 'Besisahar',
-          lat: 28.2168,
-          lng: 84.3686,
-          alt: 760,
-          distance: '0.0 km',
-        ),
-        Waypoint(
-          name: 'Chame',
-          lat: 28.5532,
-          lng: 84.3168,
-          alt: 2670,
-          distance: '14.2 km',
-        ),
-        Waypoint(
-          name: 'Manang',
-          lat: 28.6667,
-          lng: 84.0167,
-          alt: 3519,
-          distance: '28.5 km',
-        ),
-        Waypoint(
-          name: 'Yak Kharka',
-          lat: 28.7182,
-          lng: 83.9912,
-          alt: 4110,
-          distance: '38.1 km',
-        ),
-        Waypoint(
-          name: 'Thorong Phedi',
-          lat: 28.7972,
-          lng: 83.9782,
-          alt: 4540,
-          distance: '45.0 km',
-        ),
-        Waypoint(
-          name: 'Thorong La Pass',
-          lat: 28.7915,
-          lng: 83.9382,
-          alt: 5416,
-          distance: '50.3 km',
-        ),
-        Waypoint(
-          name: 'Muktinath',
-          lat: 28.8167,
-          lng: 83.8667,
-          alt: 3800,
-          distance: '60.1 km',
-        ),
-      ];
-    } else if (widget.region.contains('Langtang')) {
-      _waypoints = const [
-        Waypoint(
-          name: 'Syabrubesi',
-          lat: 28.1333,
-          lng: 85.3333,
-          alt: 1460,
-          distance: '0.0 km',
-        ),
-        Waypoint(
-          name: 'Lama Hotel',
-          lat: 28.1834,
-          lng: 85.4182,
-          alt: 2470,
-          distance: '11.8 km',
-        ),
-        Waypoint(
-          name: 'Langtang Village',
-          lat: 28.2031,
-          lng: 85.4912,
-          alt: 3430,
-          distance: '21.5 km',
-        ),
-        Waypoint(
-          name: 'Kyanjin Gompa',
-          lat: 28.2167,
-          lng: 85.6167,
-          alt: 3830,
-          distance: '29.2 km',
-        ),
-        Waypoint(
-          name: 'Kyanjin Ri Peak',
-          lat: 28.2289,
-          lng: 85.6212,
-          alt: 4773,
-          distance: '33.8 km',
-        ),
-      ];
-    } else if (widget.region.contains('Poon Hill')) {
-      _waypoints = const [
-        Waypoint(
-          name: 'Nayapul',
-          lat: 28.2982,
-          lng: 83.7612,
-          alt: 1070,
-          distance: '0.0 km',
-        ),
-        Waypoint(
-          name: 'Tikhedhunga',
-          lat: 28.3456,
-          lng: 83.7214,
-          alt: 1540,
-          distance: '9.2 km',
-        ),
-        Waypoint(
-          name: 'Ghorepani',
-          lat: 28.4012,
-          lng: 83.7018,
-          alt: 2860,
-          distance: '18.5 km',
-        ),
-        Waypoint(
-          name: 'Poon Hill Peak',
-          lat: 28.4000,
-          lng: 83.7000,
-          alt: 3210,
-          distance: '20.0 km',
-        ),
-        Waypoint(
-          name: 'Tadapani',
-          lat: 28.3982,
-          lng: 83.7712,
-          alt: 2630,
-          distance: '29.5 km',
-        ),
-      ];
-    } else {
-      // Default: Everest Base Camp path
-      _waypoints = const [
-        Waypoint(
-          name: 'Lukla Airport',
-          lat: 27.6878,
-          lng: 86.7314,
-          alt: 2860,
-          distance: '0.0 km',
-        ),
-        Waypoint(
-          name: 'Phakding',
-          lat: 27.7382,
-          lng: 86.7112,
-          alt: 2610,
-          distance: '8.2 km',
-        ),
-        Waypoint(
-          name: 'Namche Bazaar',
-          lat: 27.8068,
-          lng: 86.7140,
-          alt: 3440,
-          distance: '19.5 km',
-        ),
-        Waypoint(
-          name: 'Tengboche',
-          lat: 27.8364,
-          lng: 86.7645,
-          alt: 3860,
-          distance: '29.2 km',
-        ),
-        Waypoint(
-          name: 'Dingboche',
-          lat: 27.8931,
-          lng: 86.8315,
-          alt: 4410,
-          distance: '41.0 km',
-        ),
-        Waypoint(
-          name: 'Lobuche',
-          lat: 27.9482,
-          lng: 86.8113,
-          alt: 4940,
-          distance: '49.8 km',
-        ),
-        Waypoint(
-          name: 'Gorak Shep',
-          lat: 27.9813,
-          lng: 86.9248,
-          alt: 5164,
-          distance: '55.3 km',
-        ),
-        Waypoint(
-          name: 'Everest Base Camp',
-          lat: 28.0042,
-          lng: 86.8558,
-          alt: 5364,
-          distance: '62.0 km',
-        ),
-      ];
-    }
+    _waypoints = getWaypointsForRegion(widget.region);
   }
+
 
   void _toggleSimulation() {
     HapticFeedback.mediumImpact();
@@ -278,6 +82,16 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
           _showRouteFinishedDialog();
         }
       });
+      ref.read(activeTrekProvider.notifier).updateProgress(
+        region: widget.region,
+        currentIndex: _currentIndex,
+        distanceWalkedKm: _currentDistanceKm,
+        isFinished: _currentIndex >= _waypoints.length - 1,
+        latitude: _currentLat,
+        longitude: _currentLng,
+        altitude: _currentAlt,
+        totalCheckpoints: _waypoints.length,
+      );
     });
   }
 
@@ -299,6 +113,16 @@ class _TrailNavigatorScreenState extends State<TrailNavigatorScreen> {
       _lerpProgress = 0.0;
       _isPlaying = false;
     });
+    ref.read(activeTrekProvider.notifier).updateProgress(
+      region: widget.region,
+      currentIndex: 0,
+      distanceWalkedKm: 0.0,
+      isFinished: false,
+      latitude: _waypoints.isNotEmpty ? _waypoints.first.lat : null,
+      longitude: _waypoints.isNotEmpty ? _waypoints.first.lng : null,
+      altitude: _waypoints.isNotEmpty ? _waypoints.first.alt : null,
+      totalCheckpoints: _waypoints.length,
+    );
   }
 
   void _showRouteFinishedDialog() {

@@ -7,6 +7,7 @@ import 'package:path_app/core/theme/app_text_styles.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/features/map_weather/domain/entities/weather_report.dart';
 import 'package:path_app/features/map_weather/presentation/viewmodels/weather_viewmodel.dart';
+import 'package:path_app/features/treks/presentation/viewmodels/trek_viewmodel.dart';
 
 class MapWeatherScreen extends ConsumerStatefulWidget {
   const MapWeatherScreen({super.key});
@@ -19,6 +20,21 @@ class _MapWeatherScreenState extends ConsumerState<MapWeatherScreen> {
   String _selectedRegion = 'Everest';
 
   final List<String> _regions = ['Everest', 'Annapurna', 'Langtang', 'Poon Hill'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-select region if there is an active trek simulation
+    final activeState = ref.read(activeTrekProvider);
+    if (activeState.region != null) {
+      for (final r in _regions) {
+        if (activeState.region!.toLowerCase().contains(r.toLowerCase())) {
+          _selectedRegion = r;
+          break;
+        }
+      }
+    }
+  }
 
   void _onRegionChanged(String region) {
     HapticFeedback.selectionClick();
@@ -118,13 +134,31 @@ class _MapWeatherScreenState extends ConsumerState<MapWeatherScreen> {
   }
 }
 
-class _MapPreviewCard extends StatelessWidget {
+class _MapPreviewCard extends ConsumerWidget {
   final String region;
 
   const _MapPreviewCard({required this.region});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeState = ref.watch(activeTrekProvider);
+    final isMatchingRegion = activeState.region != null &&
+        activeState.region!.toLowerCase().contains(region.toLowerCase());
+
+    String cardSubtitle = '$region • GPS Simulator Ready';
+    String buttonLabel = 'Open GPX Navigator';
+    
+    if (isMatchingRegion) {
+      final totalWps = activeState.totalCheckpoints;
+      final curIdx = activeState.currentCheckpointIndex;
+      final progressPercent = (totalWps > 1)
+          ? (curIdx / (totalWps - 1) * 100).clamp(0, 100).toInt()
+          : 0;
+
+      cardSubtitle = 'ACTIVE SIMULATION RUNNING • Day ${curIdx + 1}';
+      buttonLabel = 'Resume Navigator ($progressPercent% Done)';
+    }
+
     return ClayContainer(
       borderRadius: 22,
       depth: 6,
@@ -171,7 +205,7 @@ class _MapPreviewCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$region • GPS Simulator Ready',
+                    cardSubtitle,
                     style: AppTextStyles.caption.copyWith(
                       color: Colors.white.withValues(alpha: 0.85),
                       fontWeight: FontWeight.w500,
@@ -191,7 +225,9 @@ class _MapPreviewCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: () {
                   HapticFeedback.mediumImpact();
-                  context.push('/map-weather/navigator', extra: region);
+                  // Fallback to active state region if it's matching
+                  final targetRegion = isMatchingRegion ? activeState.region! : region;
+                  context.push('/map-weather/navigator', extra: targetRegion);
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -201,8 +237,13 @@ class _MapPreviewCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
-                label: const Text('Open GPX Navigator'),
+                icon: Icon(
+                  isMatchingRegion
+                      ? Icons.play_arrow_rounded
+                      : Icons.play_circle_outline_rounded,
+                  size: 18,
+                ),
+                label: Text(buttonLabel),
               ),
             ),
           ],
@@ -212,7 +253,7 @@ class _MapPreviewCard extends StatelessWidget {
   }
 }
 
-class _CurrentWeatherCard extends StatelessWidget {
+class _CurrentWeatherCard extends ConsumerWidget {
   final WeatherReport report;
 
   const _CurrentWeatherCard({required this.report});
@@ -252,7 +293,43 @@ class _CurrentWeatherCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeState = ref.watch(activeTrekProvider);
+    // Matches by checking if activeState region contains first word of report.region (e.g. Everest, Annapurna, Langtang, Ghorepani/Poon)
+    final isMatchingRegion = activeState.region != null &&
+        activeState.region!.toLowerCase().contains(report.region.split(' ').first.toLowerCase());
+
+    double displayLat = report.latitude;
+    double displayLng = report.longitude;
+    int displayAlt = report.altitudeM;
+    String displayTemp = report.temperature;
+    String displayMinMax = report.tempMinMax;
+
+    if (isMatchingRegion && activeState.currentLatitude != null) {
+      displayLat = activeState.currentLatitude!;
+      displayLng = activeState.currentLongitude!;
+      displayAlt = activeState.currentAltitude?.round() ?? report.altitudeM;
+
+      // Extract original base temperature
+      final baseTemp = int.tryParse(report.temperature.replaceAll('°C', '')) ?? 0;
+      // Calculate dynamic temperature reduction (-6.5 C per 1000m altitude gain)
+      if (displayAlt > report.altitudeM) {
+        final tempDiff = ((displayAlt - report.altitudeM) * 0.0065).round();
+        final dynamicTemp = baseTemp - tempDiff;
+        displayTemp = "$dynamicTemp°C";
+
+        // Shift Min/Max accordingly
+        final cleanMinMax = report.tempMinMax.replaceAll('°', '').split('/');
+        if (cleanMinMax.length == 2) {
+          final baseMax = int.tryParse(cleanMinMax[0].trim()) ?? 0;
+          final baseMin = int.tryParse(cleanMinMax[1].trim()) ?? 0;
+          final dynamicMax = baseMax - tempDiff;
+          final dynamicMin = baseMin - tempDiff;
+          displayMinMax = "$dynamicMax° / $dynamicMin°";
+        }
+      }
+    }
+
     final conditionColor = _getConditionColor(report.condition);
 
     return ClayContainer(
@@ -293,10 +370,14 @@ class _CurrentWeatherCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      report.description,
+                      isMatchingRegion
+                          ? 'Live GPS simulated at ${displayAlt}m'
+                          : report.description,
                       style: AppTextStyles.caption.copyWith(
-                        color: LightColors.textSecondary,
-                        fontWeight: FontWeight.w500,
+                        color: isMatchingRegion
+                            ? LightColors.forestPrimary
+                            : LightColors.textSecondary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -307,7 +388,7 @@ class _CurrentWeatherCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    report.temperature,
+                    displayTemp,
                     style: AppTextStyles.h1.copyWith(
                       color: LightColors.textPrimary,
                       fontSize: 32,
@@ -315,7 +396,7 @@ class _CurrentWeatherCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    report.tempMinMax,
+                    displayMinMax,
                     style: AppTextStyles.caption.copyWith(
                       color: LightColors.textSecondary,
                       fontWeight: FontWeight.w600,
@@ -325,7 +406,40 @@ class _CurrentWeatherCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
+          // Add a row showing the live coordinates if matching
+          if (isMatchingRegion) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: LightColors.stoneWhite,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'LAT: ${displayLat.toStringAsFixed(4)}°',
+                    style: AppTextStyles.caption.copyWith(
+                      color: LightColors.textSecondary,
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'LNG: ${displayLng.toStringAsFixed(4)}°',
+                    style: AppTextStyles.caption.copyWith(
+                      color: LightColors.textSecondary,
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
           const Divider(color: LightColors.dividerLight),
           const SizedBox(height: 12),
           Row(
