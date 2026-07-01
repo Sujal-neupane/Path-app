@@ -35,8 +35,34 @@ class AppColors {
 
   // Text
   Color get textPrimary =>
-      isDark ? DarkColors.bioluminescent : LightColors.summitDark;
+      isDark ? const Color(0xFFEAF2EC) : LightColors.summitDark;
 
   Color get textSecondary =>
-      isDark ? Colors.white70 : Colors.black54;
+      isDark ? Colors.white70 : const Color(0xFF5C6660);
+
+  Color get textTertiary =>
+      isDark ? Colors.white38 : const Color(0xFF9AA39D);
+
+  // ── Editorial neutral roles ──────────────────────────────────────
+  /// Warm off-white / near-black page canvas.
+  Color get canvas =>
+      isDark ? DarkColors.voidForest : const Color(0xFFF6F5F1);
+
+  /// Slightly raised neutral surface (cards on the canvas).
+  Color get surfaceElevated =>
+      isDark ? DarkColors.undergrowth : Colors.white;
+
+  /// Hairline border for neutral cards.
+  Color get border =>
+      isDark ? Colors.white.withValues(alpha: 0.07) : const Color(0xFFE7E5DE);
+
+  /// Soft tint of the brand colour for filled accents.
+  Color get primarySoft => isDark
+      ? DarkColors.forestPrimary.withValues(alpha: 0.18)
+      : LightColors.primaryLight;
+
+  /// Accent (amber) soft tint.
+  Color get accentSoft => isDark
+      ? DarkColors.peakAmber.withValues(alpha: 0.16)
+      : LightColors.amberLight;
 }
