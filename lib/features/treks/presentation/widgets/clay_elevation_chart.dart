@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:path_app/core/components/clay_container.dart';
-import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
+import 'package:path_app/core/theme/dark_colors.dart';
+import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/features/treks/domain/entities/itinerary_step.dart';
 
 class ClayElevationChart extends StatelessWidget {
@@ -18,11 +19,21 @@ class ClayElevationChart extends StatelessWidget {
     final minAlt = altitudes.reduce((a, b) => a < b ? a : b);
     final peakIndex = altitudes.indexOf(maxAlt);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark
+        ? DarkColors.bioluminescent
+        : LightColors.forestPrimary;
+    final textPrimaryColor = isDark ? Colors.white : LightColors.summitDark;
+    final textSecondaryColor = isDark
+        ? Colors.white70
+        : LightColors.textSecondary;
+    final containerColor = isDark ? DarkColors.deepCanopy : Colors.white;
+
     return ClayContainer(
       depth: 6,
       spread: 3,
       borderRadius: 24,
-      color: Colors.white,
+      color: containerColor,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,7 +47,7 @@ class ClayElevationChart extends StatelessWidget {
                   Text(
                     'ELEVATION PROFILE',
                     style: AppTextStyles.caption.copyWith(
-                      color: LightColors.forestPrimary,
+                      color: primaryColor,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.6,
                       fontSize: 10,
@@ -46,14 +57,17 @@ class ClayElevationChart extends StatelessWidget {
                   Text(
                     'Peak Altitude: $maxAlt m',
                     style: AppTextStyles.bodyLarge.copyWith(
-                      color: LightColors.summitDark,
+                      color: textPrimaryColor,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: LightColors.sosRed.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -70,7 +84,7 @@ class ClayElevationChart extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          
+
           SizedBox(
             height: 140,
             width: double.infinity,
@@ -80,27 +94,31 @@ class ClayElevationChart extends StatelessWidget {
                 minAlt: minAlt,
                 maxAlt: maxAlt,
                 peakIndex: peakIndex,
+                primaryColor: primaryColor,
               ),
             ),
           ),
           const SizedBox(height: 12),
-          
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(steps.length, (index) {
-              final shouldPrint = steps.length <= 6 || 
-                  index == 0 || 
-                  index == steps.length - 1 || 
-                  index == peakIndex || 
+              final shouldPrint =
+                  steps.length <= 6 ||
+                  index == 0 ||
+                  index == steps.length - 1 ||
+                  index == peakIndex ||
                   (index % (steps.length ~/ 3) == 0);
-              
+
               if (!shouldPrint) return const SizedBox.shrink();
               return Text(
                 'Day ${index + 1}',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: index == peakIndex ? LightColors.sosRed : LightColors.textSecondary,
+                  color: index == peakIndex
+                      ? LightColors.sosRed
+                      : textSecondaryColor,
                 ),
               );
             }),
@@ -116,12 +134,14 @@ class _ElevationPainter extends CustomPainter {
   final int minAlt;
   final int maxAlt;
   final int peakIndex;
+  final Color primaryColor;
 
   _ElevationPainter({
     required this.altitudes,
     required this.minAlt,
     required this.maxAlt,
     required this.peakIndex,
+    required this.primaryColor,
   });
 
   @override
@@ -143,7 +163,7 @@ class _ElevationPainter extends CustomPainter {
 
     final path = Path();
     path.moveTo(points.first.dx, points.first.dy);
-    
+
     for (int i = 0; i < points.length - 1; i++) {
       final p1 = points[i];
       final p2 = points[i + 1];
@@ -159,22 +179,22 @@ class _ElevationPainter extends CustomPainter {
     final fillPaint = Paint()
       ..shader = LinearGradient(
         colors: [
-          LightColors.forestPrimary.withValues(alpha: 0.25),
-          LightColors.forestPrimary.withValues(alpha: 0.0),
+          primaryColor.withValues(alpha: 0.25),
+          primaryColor.withValues(alpha: 0.0),
         ],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ).createShader(Rect.fromLTRB(0, 0, size.width, size.height))
       ..style = PaintingStyle.fill;
-    
+
     canvas.drawPath(fillPath, fillPaint);
 
     final linePaint = Paint()
-      ..color = LightColors.forestPrimary
+      ..color = primaryColor
       ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    
+
     canvas.drawPath(path, linePaint);
 
     final peakPoint = points[peakIndex];
@@ -200,11 +220,11 @@ class _ElevationPainter extends CustomPainter {
     final dotOuterPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    
+
     for (int i = 0; i < points.length; i++) {
       final p = points[i];
       final isPeak = i == peakIndex;
-      
+
       final dotInnerPaint = Paint()
         ..color = isPeak ? LightColors.sosRed : LightColors.peakAmber
         ..style = PaintingStyle.fill;
@@ -219,6 +239,7 @@ class _ElevationPainter extends CustomPainter {
     return oldDelegate.altitudes != altitudes ||
         oldDelegate.minAlt != minAlt ||
         oldDelegate.maxAlt != maxAlt ||
-        oldDelegate.peakIndex != peakIndex;
+        oldDelegate.peakIndex != peakIndex ||
+        oldDelegate.primaryColor != primaryColor;
   }
 }
