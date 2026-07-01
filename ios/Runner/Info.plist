@@ -45,5 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>PATH needs access to your location to guide you along high-altitude mountain trails and record your route profile.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>PATH needs continuous access to your location for real-time safety tracking and offline wilderness navigation.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>PATH needs background location tracking to notify you of proximity to high-altitude AMS zones and keep family/safety contacts updated in case of emergency.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 </dict>
 </plist>
