@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:path_app/core/theme/light_colors.dart';
 
+/// Claymorphic container — soft, rounded, matte 3D appearance.
+///
+/// Achieves clay effect through:
+/// - Subtle dual shadow system (no harsh edges)
+/// - Soft internal gradient (no glossy shine)
+/// - NO border highlight (pure matte clay)
 class ClayContainer extends StatelessWidget {
   final Widget child;
   final double depth;
@@ -12,71 +17,82 @@ class ClayContainer extends StatelessWidget {
   final BoxBorder? border;
   final bool isDark;
   final bool isFlat;
+  final bool isInset;
   final BorderRadiusGeometry? customBorderRadius;
 
   const ClayContainer({
     super.key,
     required this.child,
-    this.depth = 8.0,
-    this.spread = 4.0,
-    this.borderRadius = 24.0,
+    this.depth = 6.0,
+    this.spread = 2.0,
+    this.borderRadius = 20.0,
     this.color,
     this.padding = const EdgeInsets.all(16.0),
     this.margin,
     this.border,
     this.isDark = false,
     this.isFlat = false,
+    this.isInset = false,
     this.customBorderRadius,
   });
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = color ?? (isDark ? LightColors.summitDark : Colors.white);
+    final isThemeDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveIsDark = isDark || isThemeDark;
     
-    // Calculate light and dark tones for the inner gradient and outer shadows
-    final lightColor = _getLightColor(baseColor);
-    final darkColor = _getDarkColor(baseColor);
+    final baseColor = color ?? (effectiveIsDark ? const Color(0xFF0D2219) : Colors.white);
 
-    // Claymorphism lighting gradient
+    final resolvedBorderRadius =
+        customBorderRadius ?? BorderRadius.circular(borderRadius);
+
+    if (isFlat) {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: margin,
+        padding: padding,
+        decoration: BoxDecoration(
+          color: baseColor,
+          borderRadius: resolvedBorderRadius,
+          border: border,
+        ),
+        child: child,
+      );
+    }
+
+    // Subtle clay gradient — top slightly lighter, bottom slightly darker
+    final lightColor = _adjustLightness(baseColor, effectiveIsDark ? 0.02 : 0.04);
+    final darkColor = _adjustLightness(baseColor, effectiveIsDark ? -0.01 : -0.03);
+
     final gradient = LinearGradient(
-      colors: isFlat 
-        ? [baseColor, baseColor]
-        : [lightColor, darkColor],
+      colors: [lightColor, darkColor],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
 
-    // Claymorphic double outer shadow system
-    final shadows = [
-      // Dark bottom-right shadow (recess depth)
-      BoxShadow(
-        color: isDark 
-          ? const Color(0xFF08140E).withValues(alpha: 0.5)
-          : const Color(0xFFC0C9C3).withValues(alpha: 0.6),
-        offset: Offset(depth, depth),
-        blurRadius: depth * 2,
-        spreadRadius: spread * 0.5,
-      ),
-      // Light top-left shadow (ambient glow)
-      BoxShadow(
-        color: isDark 
-          ? Colors.white.withValues(alpha: 0.04)
-          : Colors.white,
-        offset: Offset(-depth, -depth),
-        blurRadius: depth * 2,
-        spreadRadius: spread * 0.5,
-      ),
-    ];
-
-    // Top-left highlight border simulating 3D highlight edge
-    final defaultBorder = Border.all(
-      color: isDark
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.white.withValues(alpha: 0.8),
-      width: 2.0,
-    );
-
-    final resolvedBorderRadius = customBorderRadius ?? BorderRadius.circular(borderRadius);
+    // Soft clay shadows — no harsh white glow
+    final shadows = isInset
+        ? <BoxShadow>[]
+        : [
+            // Bottom-right soft shadow
+            BoxShadow(
+              color: effectiveIsDark
+                  ? const Color(0xFF020906).withValues(alpha: 0.5)
+                  : const Color(0xFFB8C0BA).withValues(alpha: 0.45),
+              offset: Offset(depth * 0.6, depth * 0.6),
+              blurRadius: depth * 1.5,
+              spreadRadius: spread * 0.2,
+            ),
+            // Top-left ambient lift (very subtle, no white shine)
+            BoxShadow(
+              color: effectiveIsDark
+                  ? Colors.white.withValues(alpha: 0.03)
+                  : Colors.white.withValues(alpha: 0.7),
+              offset: Offset(-depth * 0.4, -depth * 0.4),
+              blurRadius: depth * 1.2,
+              spreadRadius: spread * 0.1,
+            ),
+          ];
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -85,26 +101,20 @@ class ClayContainer extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: resolvedBorderRadius,
-        border: border ?? defaultBorder,
+        border: border,
         boxShadow: shadows,
       ),
       child: child,
     );
   }
 
-  Color _getLightColor(Color color) {
-    if (color == Colors.white) return color;
-    
-    // Tint color towards white to create top-left highlight source
-    final hsl = HSLColor.fromColor(color);
-    return hsl.withLightness((hsl.lightness + 0.06).clamp(0.0, 1.0)).toColor();
-  }
+  Color _adjustLightness(Color color, double amount) {
+    if (color == Colors.white && amount > 0) return color;
+    if (color == Colors.white && amount < 0) return const Color(0xFFF5F5F3);
 
-  Color _getDarkColor(Color color) {
-    if (color == Colors.white) return const Color(0xFFECEFF1);
-    
-    // Shade color slightly to create bottom-right shadow sink
     final hsl = HSLColor.fromColor(color);
-    return hsl.withLightness((hsl.lightness - 0.05).clamp(0.0, 1.0)).toColor();
+    return hsl
+        .withLightness((hsl.lightness + amount).clamp(0.0, 1.0))
+        .toColor();
   }
 }
