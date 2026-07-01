@@ -1,13 +1,39 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_app/core/components/clay_container.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
+import 'package:path_app/core/theme/app_theme.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/features/auth/presentation/viewmodels/auth_session_controller.dart';
-import 'package:path_app/features/treks/domain/entities/waypoint.dart';
+import 'package:path_app/features/profile/presentation/viewmodels/profile_viewmodel.dart';
 import 'package:path_app/features/treks/presentation/viewmodels/trek_viewmodel.dart';
+
+class HapticsNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+  void toggle() => state = !state;
+  void set(bool val) => state = val;
+}
+
+final hapticsEnabledProvider = NotifierProvider<HapticsNotifier, bool>(
+  () => HapticsNotifier(),
+);
+
+class NotificationsNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+  void toggle() => state = !state;
+  void set(bool val) => state = val;
+}
+
+final notificationsEnabledProvider =
+    NotifierProvider<NotificationsNotifier, bool>(
+      () => NotificationsNotifier(),
+    );
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -16,25 +42,36 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionAsync = ref.watch(authSessionControllerProvider);
     final activeState = ref.watch(activeTrekProvider);
+    final theme = ref.watch(appThemeProvider);
+    final colors = theme.colors;
+    // Real-time profile stats (XP, level, distance, elevation, badges).
+    final stats = ref.watch(profileStatsProvider).asData?.value;
 
     return Scaffold(
-      backgroundColor: LightColors.stoneWhite,
+      backgroundColor: colors.background,
       body: SafeArea(
-        child: sessionAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: LightColors.forestPrimary),
-          ),
-          error: (err, stack) => _ProfileContent(
-            name: 'Explorer',
-            email: 'offline@hiker.com',
-            activeState: activeState,
-            ref: ref,
-          ),
-          data: (state) => _ProfileContent(
-            name: state.user?.name ?? 'Explorer',
-            email: state.user?.email ?? 'hiker@himalayas.com',
-            activeState: activeState,
-            ref: ref,
+        child: RefreshIndicator(
+          color: colors.primary,
+          onRefresh: () => ref.refresh(profileStatsProvider.future),
+          child: sessionAsync.when(
+            loading: () =>
+                Center(child: CircularProgressIndicator(color: colors.primary)),
+            error: (err, stack) => _ProfileContent(
+              name: 'Explorer',
+              email: 'offline@hiker.com',
+              activeState: activeState,
+              stats: stats,
+              ref: ref,
+              colors: colors,
+            ),
+            data: (state) => _ProfileContent(
+              name: state.user?.name ?? 'Explorer',
+              email: state.user?.email ?? 'hiker@himalayas.com',
+              activeState: activeState,
+              stats: stats,
+              ref: ref,
+              colors: colors,
+            ),
           ),
         ),
       ),
@@ -46,58 +83,45 @@ class _ProfileContent extends StatelessWidget {
   final String name;
   final String email;
   final ActiveTrekState activeState;
+  final ProfileStats? stats;
   final WidgetRef ref;
+  final dynamic colors;
 
   const _ProfileContent({
     required this.name,
     required this.email,
     required this.activeState,
+    required this.stats,
     required this.ref,
+    required this.colors,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isTracking =
         activeState.region != null && activeState.region!.isNotEmpty;
 
     // 1. Calculate Real-Time Hiker Stats
     double activeDistance = activeState.distanceWalkedKm;
-    double startAlt = 0.0;
     double currentAlt = 0.0;
     int currentGain = 0;
 
     if (isTracking) {
-      final wps = getWaypointsForRegion(activeState.region!);
-      if (wps.isNotEmpty) {
-        startAlt = wps.first.alt;
-        currentAlt = activeState.currentAltitude ?? startAlt;
-        currentGain = (currentAlt - startAlt).clamp(0.0, 10000.0).round();
-      }
+      currentAlt = activeState.currentAltitude ?? 0.0;
+      currentGain = currentAlt.clamp(0.0, 10000.0).round();
     }
 
-    final double totalDistance = 52.4 + activeDistance;
-    final int totalElevation = 1450 + currentGain;
-    final int completedTreks = 3 + (activeState.isFinished ? 1 : 0);
+    // Real backend stats + any live tracking gains layered on top.
+    final double totalDistance = (stats?.distanceKm ?? 0) + activeDistance;
+    final int totalElevation = (stats?.elevationM ?? 0) + currentGain;
+    final int completedTreks =
+        (stats?.treksCompleted ?? 0) + (activeState.isFinished ? 1 : 0);
+    final int totalXp = stats?.xp ?? 0;
+    final int badgeCount = stats?.badgeCount ?? 0;
 
-    // Dynamic Rank Title
-    String rankTitle = 'Himalayan Explorer';
-    if (totalDistance > 120) {
-      rankTitle = 'Himalayan Legend';
-    } else if (totalDistance > 75) {
-      rankTitle = 'Alpine Guide';
-    }
-
-    // 2. Simulated Dynamic Vitals
-    int heartRate = 68;
-    int spo2 = 99;
-
-    if (isTracking && currentAlt > startAlt) {
-      // heart rate increases with altitude climbing
-      final altDiff = currentAlt - startAlt;
-      heartRate = (72 + (altDiff * 0.006)).round().clamp(60, 140);
-      // oxygen saturation decreases slightly at altitude
-      spo2 = (98 - (currentAlt / 1200)).round().clamp(84, 99);
-    }
+    // Real rank/level from the backend XP system.
+    final String rankTitle = stats?.levelLabel ?? 'Himalayan Explorer';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -110,7 +134,7 @@ class _ProfileContent extends StatelessWidget {
         Text(
           'Profile',
           style: AppTextStyles.h1.copyWith(
-            color: LightColors.textPrimary,
+            color: colors.textPrimary,
             fontSize: 30,
           ),
         ),
@@ -121,7 +145,7 @@ class _ProfileContent extends StatelessWidget {
           borderRadius: 22,
           depth: 6,
           spread: 3,
-          color: Colors.white,
+          color: colors.surface,
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [
@@ -130,15 +154,15 @@ class _ProfileContent extends StatelessWidget {
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: LightColors.primaryLight,
+                  color: colors.primary.withValues(alpha: 0.1),
                   border: Border.all(
-                    color: LightColors.forestPrimary.withValues(alpha: 0.15),
+                    color: colors.primary.withValues(alpha: 0.15),
                     width: 2.5,
                   ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.person_rounded,
-                  color: LightColors.forestPrimary,
+                  color: colors.primary,
                   size: 34,
                 ),
               ),
@@ -150,7 +174,7 @@ class _ProfileContent extends StatelessWidget {
                     Text(
                       name,
                       style: AppTextStyles.h2.copyWith(
-                        color: LightColors.textPrimary,
+                        color: colors.textPrimary,
                         fontWeight: FontWeight.w800,
                         fontSize: 18,
                       ),
@@ -159,7 +183,7 @@ class _ProfileContent extends StatelessWidget {
                     Text(
                       email,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: LightColors.textSecondary,
+                        color: colors.textSecondary,
                         fontWeight: FontWeight.w500,
                         fontSize: 12,
                       ),
@@ -172,19 +196,40 @@ class _ProfileContent extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: LightColors.forestPrimary.withValues(alpha: 0.1),
+                        color: colors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         rankTitle.toUpperCase(),
                         style: AppTextStyles.caption.copyWith(
-                          color: LightColors.forestPrimary,
+                          color: colors.primary,
                           fontWeight: FontWeight.w800,
                           fontSize: 9,
                           letterSpacing: 0.6,
                         ),
                       ),
                     ),
+                    if (stats != null && stats!.nextLevelXp != null) ...[
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(99),
+                        child: LinearProgressIndicator(
+                          value: stats!.levelProgress,
+                          minHeight: 6,
+                          backgroundColor: colors.primary.withValues(alpha: 0.12),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(colors.primary),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${stats!.xp} / ${stats!.nextLevelXp} XP → ${stats!.nextLevelLabel}',
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -198,7 +243,7 @@ class _ProfileContent extends StatelessWidget {
           Text(
             'Live Tracker Session',
             style: AppTextStyles.h3.copyWith(
-              color: LightColors.textPrimary,
+              color: colors.textPrimary,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -207,7 +252,7 @@ class _ProfileContent extends StatelessWidget {
             borderRadius: 20,
             depth: 6,
             spread: 3,
-            color: LightColors.summitDark,
+            color: isDark ? colors.surface : LightColors.summitDark,
             isDark: true,
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -231,13 +276,13 @@ class _ProfileContent extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: LightColors.peakAmber.withValues(alpha: 0.2),
+                        color: colors.accent.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        'SIMULATING',
+                        'TRACKING',
                         style: AppTextStyles.caption.copyWith(
-                          color: LightColors.peakAmber,
+                          color: colors.accent,
                           fontSize: 8,
                           fontWeight: FontWeight.w800,
                         ),
@@ -267,17 +312,18 @@ class _ProfileContent extends StatelessWidget {
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: LightColors.summitDark,
+                          foregroundColor: isDark ? colors.surface : LightColors.summitDark,
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Resume',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
+                            color: isDark ? colors.primary : LightColors.summitDark,
                           ),
                         ),
                       ),
@@ -321,7 +367,7 @@ class _ProfileContent extends StatelessWidget {
         Text(
           'Himalayan Hiker Stats',
           style: AppTextStyles.h3.copyWith(
-            color: LightColors.textPrimary,
+            color: colors.textPrimary,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -333,7 +379,7 @@ class _ProfileContent extends StatelessWidget {
                 icon: Icons.directions_walk_rounded,
                 value: '${totalDistance.toStringAsFixed(1)} km',
                 label: 'Total Distance',
-                accentColor: LightColors.forestPrimary,
+                accentColor: colors.primary,
               ),
             ),
             const SizedBox(width: 12),
@@ -342,7 +388,7 @@ class _ProfileContent extends StatelessWidget {
                 icon: Icons.trending_up_rounded,
                 value: '+$totalElevation m',
                 label: 'Total Elevation',
-                accentColor: LightColors.altitudeBlue,
+                accentColor: colors.info,
               ),
             ),
           ],
@@ -355,16 +401,16 @@ class _ProfileContent extends StatelessWidget {
                 icon: Icons.terrain_rounded,
                 value: '$completedTreks',
                 label: 'Completed Trails',
-                accentColor: LightColors.peakAmber,
+                accentColor: colors.accent,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _StatGridCard(
-                icon: Icons.favorite_rounded,
-                value: '$heartRate bpm',
-                label: 'Simulated Pulse',
-                accentColor: LightColors.sosRed,
+                icon: Icons.bolt_rounded,
+                value: '$totalXp',
+                label: 'Experience (XP)',
+                accentColor: colors.primary,
               ),
             ),
           ],
@@ -374,10 +420,19 @@ class _ProfileContent extends StatelessWidget {
           children: [
             Expanded(
               child: _StatGridCard(
-                icon: Icons.thermostat_rounded,
-                value: '$spo2%',
-                label: 'Blood Oxygen (SpO2)',
-                accentColor: Colors.purple,
+                icon: Icons.workspace_premium_rounded,
+                value: '$badgeCount',
+                label: 'Badges Earned',
+                accentColor: colors.accent,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatGridCard(
+                icon: Icons.flag_rounded,
+                value: '${stats?.checkpointsReached ?? 0}',
+                label: 'Checkpoints',
+                accentColor: colors.info,
               ),
             ),
           ],
@@ -388,7 +443,7 @@ class _ProfileContent extends StatelessWidget {
         Text(
           'Settings & Security',
           style: AppTextStyles.h3.copyWith(
-            color: LightColors.textPrimary,
+            color: colors.textPrimary,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -397,7 +452,7 @@ class _ProfileContent extends StatelessWidget {
           icon: Icons.emergency_share_rounded,
           title: 'Emergency Logs',
           subtitle: 'Track safety distress signals',
-          iconColor: LightColors.sosRed,
+          iconColor: colors.error,
           onTap: () {
             HapticFeedback.lightImpact();
             context.push('/sos-history');
@@ -406,28 +461,31 @@ class _ProfileContent extends StatelessWidget {
         _Tile(
           icon: Icons.emoji_events_rounded,
           title: 'Achievements',
-          subtitle: '7 badges unlocked',
-          iconColor: LightColors.peakAmber,
+          subtitle: '5 badges unlocked',
+          iconColor: colors.accent,
           onTap: () {
             HapticFeedback.lightImpact();
+            _showAchievementsDialog(context, ref);
           },
         ),
         _Tile(
           icon: Icons.download_rounded,
           title: 'Offline Maps',
-          subtitle: '4 regions downloaded',
-          iconColor: LightColors.altitudeBlue,
+          subtitle: 'Manage cached trail regions',
+          iconColor: colors.info,
           onTap: () {
             HapticFeedback.lightImpact();
+            _showOfflineMapsDialog(context, ref);
           },
         ),
         _Tile(
           icon: Icons.settings_rounded,
           title: 'Preferences',
           subtitle: 'Theme, alerts, and settings',
-          iconColor: LightColors.textSecondary,
+          iconColor: colors.textSecondary,
           onTap: () {
             HapticFeedback.lightImpact();
+            _showPreferencesDialog(context, ref);
           },
         ),
 
@@ -437,7 +495,7 @@ class _ProfileContent extends StatelessWidget {
           icon: Icons.logout_rounded,
           title: 'Sign Out',
           subtitle: 'Discard local sessions safely',
-          iconColor: Colors.black54,
+          iconColor: colors.textSecondary,
           onTap: () async {
             HapticFeedback.mediumImpact();
             final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -460,9 +518,631 @@ class _ProfileContent extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────
+// Settings Modal Dialog Creators
+// ──────────────────────────────────────────────
+
+void _showAchievementsDialog(BuildContext context, WidgetRef ref) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Consumer(
+        builder: (context, ref, child) {
+          final colors = ref.watch(appThemeProvider).colors;
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: ClayContainer(
+              borderRadius: 24,
+              depth: 8,
+              spread: 3,
+              color: colors.surface,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Unlocked Badges',
+                        style: AppTextStyles.h2.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: colors.textPrimary,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 320,
+                    child: ListView(
+                      physics: const BouncingScrollPhysics(),
+                      children: [
+                        _BadgeItem(
+                          icon: '🏔️',
+                          title: 'EBC Trailblazer',
+                          subtitle: 'Completed Sagarmatha route',
+                          xp: '+500 XP',
+                          unlocked: true,
+                          colors: colors,
+                        ),
+                        _BadgeItem(
+                          icon: '🦵',
+                          title: 'Annapurna Walker',
+                          subtitle: 'Hiked over 50 km',
+                          xp: '+200 XP',
+                          unlocked: true,
+                          colors: colors,
+                        ),
+                        _BadgeItem(
+                          icon: '🤝',
+                          title: 'Social Sherpa',
+                          subtitle: 'Shared community insights',
+                          xp: '+100 XP',
+                          unlocked: true,
+                          colors: colors,
+                        ),
+                        _BadgeItem(
+                          icon: '💳',
+                          title: 'Permitted Hiker',
+                          subtitle: 'Booked Stripe permit fee',
+                          xp: '+150 XP',
+                          unlocked: true,
+                          colors: colors,
+                        ),
+                        _BadgeItem(
+                          icon: '🎒',
+                          title: 'Gear Master',
+                          subtitle: 'Packed correct trek gear',
+                          xp: '+100 XP',
+                          unlocked: true,
+                          colors: colors,
+                        ),
+                        _BadgeItem(
+                          icon: '⬆️',
+                          title: 'Altitude Pioneer',
+                          subtitle: 'Climbed above 5,000m',
+                          xp: '+300 XP',
+                          unlocked: false,
+                          colors: colors,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+}
+
+class _BadgeItem extends StatelessWidget {
+  final String icon;
+  final String title;
+  final String subtitle;
+  final String xp;
+  final bool unlocked;
+  final dynamic colors;
+
+  const _BadgeItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.xp,
+    required this.unlocked,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: ClayContainer(
+        borderRadius: 16,
+        depth: unlocked ? 4 : 1,
+        spread: 1.5,
+        color: colors.surface,
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: unlocked
+                    ? colors.primary.withValues(alpha: 0.1)
+                    : colors.textSecondary.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  icon,
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: unlocked ? null : Colors.grey,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: unlocked
+                          ? colors.textPrimary
+                          : colors.textSecondary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  xp,
+                  style: TextStyle(
+                    color: unlocked ? colors.primary : colors.textSecondary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                  ),
+                ),
+                Icon(
+                  unlocked ? Icons.check_circle_rounded : Icons.lock_rounded,
+                  size: 14,
+                  color: unlocked ? colors.primary : Colors.grey,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _showOfflineMapsDialog(BuildContext context, WidgetRef ref) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Consumer(
+        builder: (context, ref, child) {
+          final colors = ref.watch(appThemeProvider).colors;
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: ClayContainer(
+              borderRadius: 24,
+              depth: 8,
+              spread: 3,
+              color: colors.surface,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Offline Regions',
+                        style: AppTextStyles.h2.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: colors.textPrimary,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Download topographic GIS vector tiles for offline trail routing.',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 280,
+                    child: ListView(
+                      physics: const BouncingScrollPhysics(),
+                      children: const [
+                        _OfflineMapDownloader(
+                          region: 'Everest Region',
+                          size: '42 MB',
+                        ),
+                        _OfflineMapDownloader(
+                          region: 'Annapurna Conservation',
+                          size: '65 MB',
+                        ),
+                        _OfflineMapDownloader(
+                          region: 'Langtang Valley',
+                          size: '28 MB',
+                        ),
+                        _OfflineMapDownloader(
+                          region: 'Ghorepani Poon Hill',
+                          size: '15 MB',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+}
+
+class _OfflineMapDownloader extends ConsumerStatefulWidget {
+  final String region;
+  final String size;
+
+  const _OfflineMapDownloader({
+    required this.region,
+    required this.size,
+  });
+
+  @override
+  ConsumerState<_OfflineMapDownloader> createState() =>
+      _OfflineMapDownloaderState();
+}
+
+class _OfflineMapDownloaderState extends ConsumerState<_OfflineMapDownloader> {
+  double _progress = 0.0;
+  bool _isDownloading = false;
+  bool _isDownloaded = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDownloadState();
+  }
+
+  Future<void> _loadDownloadState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (mounted) {
+        setState(() {
+          _isDownloaded = prefs.getBool('offline_map_${widget.region}') ?? false;
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startDownload() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _isDownloading = true;
+      _progress = 0.0;
+    });
+
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      setState(() {
+        _progress += 0.05;
+        if (_progress >= 1.0) {
+          _progress = 1.0;
+          _isDownloading = false;
+          _isDownloaded = true;
+          _timer?.cancel();
+          HapticFeedback.mediumImpact();
+          SharedPreferences.getInstance().then((prefs) {
+            prefs.setBool('offline_map_${widget.region}', true);
+          });
+        }
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = ref.watch(appThemeProvider).colors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: ClayContainer(
+        borderRadius: 16,
+        depth: 4,
+        spread: 1.5,
+        color: colors.surface,
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.region,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        widget.size,
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _isDownloading || _isDownloaded
+                      ? null
+                      : _startDownload,
+                  child: ClayContainer(
+                    borderRadius: 10,
+                    depth: _isDownloaded ? 1 : 4,
+                    spread: 1,
+                    color: _isDownloaded ? colors.primary : colors.surface,
+                    isDark: _isDownloaded,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    child: _isDownloaded
+                        ? const Icon(
+                            Icons.cloud_done_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          )
+                        : _isDownloading
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colors.primary,
+                            ),
+                          )
+                        : Icon(
+                            Icons.cloud_download_rounded,
+                            color: colors.primary,
+                            size: 16,
+                          ),
+                  ),
+                ),
+              ],
+            ),
+            if (_isDownloading) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: _progress,
+                  backgroundColor: colors.background,
+                  valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
+                  minHeight: 4,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Downloading Vector tiles...',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                      fontSize: 10,
+                    ),
+                  ),
+                  Text(
+                    '${(_progress * 100).toStringAsFixed(0)}%',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _showPreferencesDialog(BuildContext context, WidgetRef ref) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Consumer(
+        builder: (context, ref, child) {
+          final isDark = ref.watch(themeModeProvider);
+          final colors = ref.watch(appThemeProvider).colors;
+          final haptics = ref.watch(hapticsEnabledProvider);
+          final notifications = ref.watch(notificationsEnabledProvider);
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: ClayContainer(
+              borderRadius: 24,
+              depth: 8,
+              spread: 3,
+              color: colors.surface,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Preferences',
+                        style: AppTextStyles.h2.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: colors.textPrimary,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Theme Mode Option
+                  _PreferenceToggle(
+                    icon: Icons.dark_mode_rounded,
+                    title: 'Dark Theme Mode',
+                    subtitle: 'Optimized high-contrast night mapping',
+                    value: isDark,
+                    colors: colors,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      ref.read(themeModeProvider.notifier).toggleTheme();
+                    },
+                  ),
+
+                  // Haptics Option
+                  _PreferenceToggle(
+                    icon: Icons.vibration_rounded,
+                    title: 'Tactile Haptic Feedback',
+                    subtitle: 'Feel menu selections physically',
+                    value: haptics,
+                    colors: colors,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      ref.read(hapticsEnabledProvider.notifier).set(val);
+                    },
+                  ),
+
+                  // Push notifications
+                  _PreferenceToggle(
+                    icon: Icons.notifications_active_rounded,
+                    title: 'Safety Warning Alerts',
+                    subtitle: 'Receive storm & altitude warnings',
+                    value: notifications,
+                    colors: colors,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      ref.read(notificationsEnabledProvider.notifier).set(val);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+class _PreferenceToggle extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final dynamic colors;
+  final ValueChanged<bool> onChanged;
+
+  const _PreferenceToggle({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.colors,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: colors.primary, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            value: value,
+            activeColor: colors.primary,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
 // Claymorphic Grid Metric Tile
 // ──────────────────────────────────────────────
-class _StatGridCard extends StatelessWidget {
+class _StatGridCard extends ConsumerWidget {
   final IconData icon;
   final String value;
   final String label;
@@ -476,12 +1156,14 @@ class _StatGridCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(appThemeProvider).colors;
+
     return ClayContainer(
       depth: 4,
       spread: 2,
       borderRadius: 16,
-      color: Colors.white,
+      color: colors.surface,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,7 +1181,7 @@ class _StatGridCard extends StatelessWidget {
           Text(
             value,
             style: AppTextStyles.h3.copyWith(
-              color: LightColors.textPrimary,
+              color: colors.textPrimary,
               fontWeight: FontWeight.w800,
               fontSize: 16,
             ),
@@ -508,7 +1190,7 @@ class _StatGridCard extends StatelessWidget {
           Text(
             label,
             style: AppTextStyles.caption.copyWith(
-              color: LightColors.textSecondary,
+              color: colors.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -522,7 +1204,7 @@ class _StatGridCard extends StatelessWidget {
 // ──────────────────────────────────────────────
 // Profile List Option Tile
 // ──────────────────────────────────────────────
-class _Tile extends StatelessWidget {
+class _Tile extends ConsumerWidget {
   final IconData icon;
   final String title;
   final String subtitle;
@@ -538,7 +1220,9 @@ class _Tile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = ref.watch(appThemeProvider).colors;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: GestureDetector(
@@ -547,7 +1231,7 @@ class _Tile extends StatelessWidget {
           borderRadius: 16,
           depth: 6,
           spread: 2,
-          color: Colors.white,
+          color: colors.surface,
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
@@ -568,7 +1252,7 @@ class _Tile extends StatelessWidget {
                     Text(
                       title,
                       style: AppTextStyles.bodyLarge.copyWith(
-                        color: LightColors.textPrimary,
+                        color: colors.textPrimary,
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
                       ),
@@ -577,7 +1261,7 @@ class _Tile extends StatelessWidget {
                     Text(
                       subtitle,
                       style: AppTextStyles.caption.copyWith(
-                        color: LightColors.textSecondary,
+                        color: colors.textSecondary,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -585,10 +1269,10 @@ class _Tile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 14,
-                color: LightColors.textTertiary,
+                color: colors.textPrimary.withValues(alpha: 0.3),
               ),
             ],
           ),
