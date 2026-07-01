@@ -1,3 +1,5 @@
+/// A geographic waypoint on a trek trail.
+/// All waypoint data now comes from the backend API — no hardcoded coordinates.
 class Waypoint {
   final String name;
   final double lat;
@@ -12,6 +14,25 @@ class Waypoint {
     required this.alt,
     required this.distance,
   });
+
+  /// Deserialize from backend checkpoint JSON.
+  factory Waypoint.fromJson(Map<String, dynamic> json) {
+    return Waypoint(
+      name: json['title'] as String? ?? json['name'] as String? ?? '',
+      lat: (json['latitude'] as num?)?.toDouble() ?? (json['lat'] as num?)?.toDouble() ?? 0.0,
+      lng: (json['longitude'] as num?)?.toDouble() ?? (json['lng'] as num?)?.toDouble() ?? 0.0,
+      alt: (json['altitude_m'] as num?)?.toDouble() ?? (json['alt'] as num?)?.toDouble() ?? 0.0,
+      distance: json['distance'] as String? ?? '0.0 km',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'lat': lat,
+    'lng': lng,
+    'alt': alt,
+    'distance': distance,
+  };
 }
 
 List<Waypoint> getWaypointsForRegion(String region) {
