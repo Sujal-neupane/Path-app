@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_app/core/components/clay_container.dart';
-import 'package:path_app/core/theme/app_text_styles.dart';
+import 'package:path_app/core/theme/app_colors.dart';
+import 'package:path_app/core/theme/app_typography.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/features/sos/domain/entities/sos_alert.dart';
 import 'package:path_app/features/sos/presentation/viewmodels/sos_viewmodel.dart';
@@ -12,49 +12,53 @@ class SosHistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
     final sosHistoryAsync = ref.watch(sosHistoryProvider);
 
     return Scaffold(
-      backgroundColor: LightColors.stoneWhite,
+      backgroundColor: c.canvas,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: c.canvas,
         elevation: 0,
+        scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: LightColors.textPrimary),
+          icon: Icon(Icons.arrow_back_rounded, color: c.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Emergency Logs',
-          style: AppTextStyles.h2.copyWith(color: LightColors.textPrimary),
+        title: Column(
+          children: [
+            Text('SAFETY',
+                style: AppType.eyebrow.copyWith(color: LightColors.sosRed)),
+            const SizedBox(height: 2),
+            Text('Emergency logs',
+                style: AppType.titleSm.copyWith(color: c.textPrimary)),
+          ],
         ),
+        centerTitle: true,
       ),
       body: RefreshIndicator(
-        color: LightColors.forestPrimary,
+        color: c.primary,
         onRefresh: () async {
           HapticFeedback.lightImpact();
           ref.invalidate(sosHistoryProvider);
         },
         child: sosHistoryAsync.when(
-          loading: () => const _SosHistorySkeleton(),
+          loading: () =>
+              Center(child: CircularProgressIndicator(color: c.primary)),
           error: (err, stack) => _SosHistoryErrorView(
             message: err.toString(),
             onRetry: () => ref.invalidate(sosHistoryProvider),
           ),
           data: (alerts) {
-            if (alerts.isEmpty) {
-              return const _SosHistoryEmptyView();
-            }
-
+            if (alerts.isEmpty) return const _SosHistoryEmptyView();
             return ListView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
               itemCount: alerts.length,
-              itemBuilder: (context, index) {
-                final alert = alerts[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _SosAlertCard(alert: alert),
-                );
-              },
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _SosAlertCard(alert: alerts[index]),
+              ),
             );
           },
         ),
@@ -65,45 +69,28 @@ class SosHistoryScreen extends ConsumerWidget {
 
 class _SosAlertCard extends StatelessWidget {
   final SosAlert alert;
-
   const _SosAlertCard({required this.alert});
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'resolved':
-        return LightColors.successGreen;
-      case 'acknowledged':
-        return LightColors.altitudeBlue;
-      case 'pending':
-      default:
-        return LightColors.warningOrange;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'resolved':
-        return 'RESCUE RESOLVED';
-      case 'acknowledged':
-        return 'RESCUE DISPATCHED';
-      case 'pending':
-      default:
-        return 'SIGNAL PENDING';
-    }
-  }
+  (Color, String) _status(String status) => switch (status) {
+        'resolved' => (LightColors.successGreen, 'RESCUE RESOLVED'),
+        'acknowledged' => (LightColors.altitudeBlue, 'RESCUE DISPATCHED'),
+        _ => (LightColors.warningOrange, 'SIGNAL PENDING'),
+      };
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _getStatusColor(alert.status);
-    final statusText = _getStatusText(alert.status);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+    final (statusColor, statusText) = _status(alert.status);
     final formattedDate = alert.createdAt.toLocal().toString().substring(0, 16);
 
-    return ClayContainer(
-      borderRadius: 20,
-      depth: 6,
-      spread: 3,
-      color: Colors.white,
+    return Container(
       padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: c.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: c.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -111,50 +98,39 @@ class _SosAlertCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  color: statusColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
                 ),
-                child: Text(
-                  statusText,
-                  style: AppTextStyles.caption.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 10,
-                    letterSpacing: 0.6,
-                  ),
-                ),
+                child: Text(statusText,
+                    style: AppType.caption.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 10,
+                      letterSpacing: 0.6,
+                    )),
               ),
-              Text(
-                formattedDate,
-                style: AppTextStyles.caption.copyWith(
-                  color: LightColors.textTertiary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                ),
-              ),
+              Text(formattedDate,
+                  style: AppType.caption.copyWith(color: c.textTertiary)),
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            alert.message ?? 'No details provided.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: LightColors.textPrimary,
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-            ),
-          ),
+          Text(alert.message ?? 'No details provided.',
+              style: AppType.bodySm.copyWith(
+                  color: c.textPrimary, fontWeight: FontWeight.w700)),
           const SizedBox(height: 14),
-          const Divider(color: LightColors.dividerLight),
-          const SizedBox(height: 10),
+          Divider(color: c.border, height: 1),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _MetricBadge(
                   icon: Icons.my_location_rounded,
                   label: 'Coordinates',
-                  value: '${alert.latitude.toStringAsFixed(4)}, ${alert.longitude.toStringAsFixed(4)}',
+                  value:
+                      '${alert.latitude.toStringAsFixed(4)}, ${alert.longitude.toStringAsFixed(4)}',
                 ),
               ),
               if (alert.altitude != null)
@@ -169,7 +145,7 @@ class _SosAlertCard extends StatelessWidget {
                 Expanded(
                   child: _MetricBadge(
                     icon: Icons.battery_charging_full_rounded,
-                    label: 'Device Battery',
+                    label: 'Battery',
                     value: '${alert.batteryLevel!.round()}%',
                   ),
                 ),
@@ -194,34 +170,25 @@ class _MetricBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 12, color: LightColors.textTertiary),
+            Icon(icon, size: 12, color: c.textTertiary),
             const SizedBox(width: 4),
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: LightColors.textTertiary,
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            Text(label,
+                style: AppType.caption.copyWith(color: c.textTertiary, fontSize: 9)),
           ],
         ),
         const SizedBox(height: 2),
         Padding(
           padding: const EdgeInsets.only(left: 16),
-          child: Text(
-            value,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: LightColors.textSecondary,
-              fontWeight: FontWeight.w800,
-              fontSize: 11,
-            ),
-          ),
+          child: Text(value,
+              style: AppType.caption.copyWith(
+                  color: c.textSecondary, fontWeight: FontWeight.w800)),
         ),
       ],
     );
@@ -233,62 +200,44 @@ class _SosHistoryEmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
     return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: ClayContainer(
-                  borderRadius: 24,
-                  depth: 6,
-                  spread: 3,
-                  color: Colors.white,
-                  padding: const EdgeInsets.all(28),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: LightColors.successLight,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.verified_user_rounded,
-                          color: LightColors.successGreen,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Safe & Sound',
-                        style: AppTextStyles.h2.copyWith(
-                          color: LightColors.textPrimary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'No emergency SOS distress signals have been triggered. Enjoy your adventures safely!',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: LightColors.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: LightColors.successGreen.withValues(alpha: 0.14),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.verified_user_rounded,
+                        color: LightColors.successGreen, size: 34),
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  Text('Safe & sound',
+                      style: AppType.title.copyWith(color: c.textPrimary)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No emergency signals have been triggered. Enjoy your adventures safely.',
+                    textAlign: TextAlign.center,
+                    style: AppType.body.copyWith(color: c.textSecondary),
+                  ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -301,83 +250,40 @@ class _SosHistoryErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: ClayContainer(
-          borderRadius: 22,
-          depth: 4,
-          color: const Color(0xFFFEECEB),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline_rounded, size: 40, color: LightColors.sosRed),
-              const SizedBox(height: 12),
-              Text(
-                'Logs Offline',
-                style: AppTextStyles.h3.copyWith(
-                  color: LightColors.textPrimary,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                message.replaceAll('Exception: ', ''),
-                textAlign: TextAlign.center,
-                style: AppTextStyles.caption.copyWith(
-                  color: LightColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 18),
-              ElevatedButton.icon(
-                onPressed: onRetry,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: LightColors.sosRed,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                ),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Try Again'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SosHistorySkeleton extends StatelessWidget {
-  const _SosHistorySkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: 3,
-      itemBuilder: (context, index) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: ClayContainer(
-          borderRadius: 20,
-          depth: 3,
-          color: Colors.white,
-          padding: const EdgeInsets.all(20),
-          child: const SizedBox(
-            height: 90,
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: LightColors.forestPrimary,
-                  strokeWidth: 2,
-                ),
-              ),
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                size: 44, color: LightColors.sosRed),
+            const SizedBox(height: 14),
+            Text('Logs offline',
+                style: AppType.title.copyWith(color: c.textPrimary)),
+            const SizedBox(height: 6),
+            Text(
+              message.replaceAll('Exception: ', ''),
+              textAlign: TextAlign.center,
+              style: AppType.caption.copyWith(color: c.textSecondary),
             ),
-          ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: onRetry,
+              style: FilledButton.styleFrom(
+                backgroundColor: LightColors.sosRed,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: Text('Try again', style: AppType.button),
+            ),
+          ],
         ),
       ),
     );
