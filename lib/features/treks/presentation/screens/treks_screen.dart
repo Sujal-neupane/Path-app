@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_app/core/components/clay_container.dart';
-import 'package:path_app/core/theme/app_text_styles.dart';
+import 'package:path_app/core/components/editorial_atoms.dart';
+import 'package:path_app/core/theme/app_colors.dart';
+import 'package:path_app/core/theme/app_typography.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/features/treks/domain/entities/trek_summary.dart';
 import 'package:path_app/features/treks/presentation/viewmodels/trek_viewmodel.dart';
@@ -13,15 +14,17 @@ class TreksScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
     final treksAsync = ref.watch(trekListProvider);
 
     return Scaffold(
-      backgroundColor: LightColors.stoneWhite,
+      backgroundColor: c.canvas,
       body: SafeArea(
         child: treksAsync.when(
-          loading: () => const _TreksLoadingShimmer(),
-          error: (error, stack) => _TreksErrorView(
-            error: error.toString(),
+          loading: () =>
+              Center(child: CircularProgressIndicator(color: c.primary)),
+          error: (error, stack) => _ErrorView(
             onRetry: () => ref.invalidate(trekListProvider),
           ),
           data: (treks) => _TreksListView(treks: treks),
@@ -31,12 +34,8 @@ class TreksScreen extends ConsumerWidget {
   }
 }
 
-// ──────────────────────────────────────────────
-// Trek List (Data loaded successfully)
-// ──────────────────────────────────────────────
 class _TreksListView extends StatefulWidget {
   final List<TrekSummary> treks;
-
   const _TreksListView({required this.treks});
 
   @override
@@ -48,7 +47,7 @@ class _TreksListViewState extends State<_TreksListView> {
   String _searchQuery = '';
   String _selectedDifficulty = 'All';
 
-  final List<String> _difficulties = ['All', 'Easy', 'Moderate', 'Challenging', 'Extreme'];
+  static const _difficulties = ['All', 'Easy', 'Moderate', 'Challenging', 'Extreme'];
 
   @override
   void dispose() {
@@ -56,27 +55,17 @@ class _TreksListViewState extends State<_TreksListView> {
     super.dispose();
   }
 
-  List<TrekSummary> get _filteredTreks {
+  List<TrekSummary> get _filtered {
+    final query = _searchQuery.toLowerCase().trim();
     return widget.treks.where((trek) {
-      final query = _searchQuery.toLowerCase().trim();
       final matchesSearch = query.isEmpty ||
           trek.name.toLowerCase().contains(query) ||
           trek.region.toLowerCase().contains(query) ||
           trek.shortDescription.toLowerCase().contains(query);
-
-      // Matches mapped labels like 'Easy', 'Moderate', 'Challenging', 'Extreme'
       final matchesDifficulty = _selectedDifficulty == 'All' ||
           trek.difficulty.toLowerCase() == _selectedDifficulty.toLowerCase();
-
       return matchesSearch && matchesDifficulty;
     }).toList();
-  }
-
-  void _clearSearch() {
-    setState(() {
-      _searchController.clear();
-      _searchQuery = '';
-    });
   }
 
   void _resetFilters() {
@@ -89,658 +78,415 @@ class _TreksListViewState extends State<_TreksListView> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.treks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.hiking_rounded,
-              size: 64,
-              color: LightColors.textTertiary.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No treks available yet',
-              style: AppTextStyles.h3.copyWith(
-                color: LightColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Official treks will appear here once published.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: LightColors.textTertiary,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final filtered = _filteredTreks;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+    final filtered = _filtered;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Available Treks',
-                  style: AppTextStyles.h1.copyWith(
-                    color: LightColors.textPrimary,
-                    fontSize: 30,
+                EyebrowLabel('Discover', color: c.primary),
+                const SizedBox(height: 8),
+                Text('Available treks',
+                    style: AppType.displayXL.copyWith(color: c.textPrimary)),
+                const SizedBox(height: 6),
+                Text('Handpicked routes for your next mountain story.',
+                    style: AppType.body.copyWith(color: c.textSecondary)),
+                const SizedBox(height: 18),
+                // Search
+                Container(
+                  decoration: BoxDecoration(
+                    color: c.surfaceElevated,
+                    borderRadius: BorderRadius.circular(AppRadii.card),
+                    border: Border.all(color: c.border),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Handpicked routes for your next mountain story.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: LightColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Claymorphic Search Bar
-                ClayContainer(
-                  borderRadius: 16,
-                  depth: 4,
-                  spread: 2,
-                  color: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.search_rounded,
-                        color: LightColors.forestPrimary,
-                        size: 20,
-                      ),
+                      Icon(Icons.search_rounded, color: c.primary, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: TextField(
                           controller: _searchController,
-                          onChanged: (val) {
-                            setState(() {
-                              _searchQuery = val;
-                            });
-                          },
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: LightColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                          style: AppType.body.copyWith(color: c.textPrimary),
                           decoration: InputDecoration(
-                            hintText: 'Search by name, region...',
-                            hintStyle: AppTextStyles.bodyMedium.copyWith(
-                              color: LightColors.textTertiary,
-                            ),
+                            hintText: 'Search name or region…',
+                            hintStyle:
+                                AppType.body.copyWith(color: c.textTertiary),
                             border: InputBorder.none,
                             isDense: true,
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
                       ),
                       if (_searchQuery.isNotEmpty)
                         GestureDetector(
-                          onTap: _clearSearch,
-                          child: const Icon(
-                            Icons.close_rounded,
-                            color: LightColors.textSecondary,
-                            size: 18,
-                          ),
+                          onTap: () => setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                          }),
+                          child: Icon(Icons.close_rounded,
+                              color: c.textSecondary, size: 18),
                         ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 14),
-
-                // Difficulty Filter Row
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    children: _difficulties.map((diff) {
-                      final isSelected = _selectedDifficulty == diff;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 10, bottom: 6, top: 4),
-                        child: GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() {
-                              _selectedDifficulty = diff;
-                            });
-                          },
-                          child: ClayContainer(
-                            borderRadius: 12,
-                            depth: isSelected ? 2 : 5,
-                            spread: isSelected ? 1 : 2,
-                            isFlat: isSelected,
-                            color: isSelected ? LightColors.meadowTint : Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            child: Text(
-                              diff,
-                              style: AppTextStyles.button.copyWith(
-                                color: isSelected
-                                    ? LightColors.primaryFocus
-                                    : LightColors.textSecondary,
-                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                fontSize: 12,
-                              ),
+                // Difficulty filter
+                SizedBox(
+                  height: 36,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _difficulties.length,
+                    separatorBuilder: (_, index) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final diff = _difficulties[i];
+                      final active = _selectedDifficulty == diff;
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedDifficulty = diff);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: active ? c.primary : c.surfaceElevated,
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                            border: Border.all(
+                                color: active ? c.primary : c.border),
+                          ),
+                          child: Text(
+                            diff,
+                            style: AppType.caption.copyWith(
+                              color: active ? Colors.white : c.textSecondary,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                       );
-                    }).toList(),
+                    },
                   ),
                 ),
               ],
             ),
           ),
         ),
-        if (filtered.isEmpty)
+        if (widget.treks.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.filter_list_off_rounded,
-                    size: 56,
-                    color: LightColors.textTertiary.withValues(alpha: 0.4),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Matching Trails',
-                    style: AppTextStyles.h3.copyWith(
-                      color: LightColors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Try adjusting your search query or selecting a different difficulty level.',
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: LightColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: _resetFilters,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: LightColors.forestPrimary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                    ),
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Reset Filters'),
-                  ),
-                ],
-              ),
+            child: _EmptyState(
+              icon: Icons.hiking_rounded,
+              title: 'No treks available yet',
+              subtitle: 'Official treks will appear here once published.',
+            ),
+          )
+        else if (filtered.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _EmptyState(
+              icon: Icons.filter_list_off_rounded,
+              title: 'No matching trails',
+              subtitle: 'Try a different search or difficulty.',
+              actionLabel: 'Reset filters',
+              onAction: _resetFilters,
             ),
           )
         else
-          SliverList.builder(
-            itemCount: filtered.length,
-            itemBuilder: (context, index) {
-              final trek = filtered[index];
-              return _TrekCard(
-                trek: trek,
-                onTap: () => context.push('/treks/${trek.id}'),
-              );
-            },
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+            sliver: SliverList.separated(
+              itemCount: filtered.length,
+              separatorBuilder: (_, index) => const SizedBox(height: 16),
+              itemBuilder: (context, index) {
+                final trek = filtered[index];
+                return _TrekListCard(
+                  trek: trek,
+                  onTap: () => context.push('/treks/${trek.id}'),
+                );
+              },
+            ),
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
     );
   }
 }
 
-// ──────────────────────────────────────────────
-// Claymorphic Trek Card
-// ──────────────────────────────────────────────
-class _TrekCard extends StatelessWidget {
+class _TrekListCard extends StatelessWidget {
   final TrekSummary trek;
   final VoidCallback onTap;
 
-  const _TrekCard({required this.trek, required this.onTap});
+  const _TrekListCard({required this.trek, required this.onTap});
+
+  Color get _difficultyColor => switch (trek.difficulty) {
+        'Easy' => LightColors.successGreen,
+        'Moderate' => LightColors.peakAmber,
+        'Challenging' => LightColors.sosRed,
+        _ => LightColors.difficultyExpert,
+      };
 
   @override
   Widget build(BuildContext context) {
-    final difficultyColor = switch (trek.difficulty) {
-      'Easy' => LightColors.successGreen,
-      'Moderate' => LightColors.peakAmber,
-      _ => LightColors.sosRed,
-    };
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+    final radius = BorderRadius.circular(AppRadii.card);
 
     return GestureDetector(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-        child: ClayContainer(
-          depth: 6,
-          spread: 3,
-          borderRadius: 24,
-          color: Colors.white,
-          padding: EdgeInsets.zero,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top Cover Image Banner with Overlays
-              SizedBox(
-                height: 160,
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.surfaceElevated,
+          borderRadius: radius,
+          border: Border.all(color: c.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Photo header
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
+              child: SizedBox(
+                height: 180,
                 width: double.infinity,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(24),
-                      ),
-                      child: Image.asset(
-                        trek.coverImageAsset,
-                        fit: BoxFit.cover,
-                      ),
+                    Image.asset(
+                      trek.coverImageAsset,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) =>
+                          Container(color: const Color(0xFF1B3A2D)),
                     ),
-                    // Gradient overlay for visual depth and contrast protection
-                    Container(
+                    const DecoratedBox(
                       decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(24),
-                        ),
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.35),
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.45),
-                          ],
+                          stops: [0.45, 1.0],
+                          colors: [Color(0x00000000), Color(0xCC000000)],
                         ),
                       ),
                     ),
-                    // Glassmorphic/Claymorphic Rating Badge
                     Positioned(
                       top: 14,
                       left: 14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.star_rounded,
-                              size: 16,
-                              color: LightColors.peakAmber,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              trek.rating.toStringAsFixed(1),
-                              style: AppTextStyles.caption.copyWith(
-                                color: LightColors.textPrimary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: GlassChip(
+                        label: trek.difficulty,
+                        dotColor: _difficultyColor,
                       ),
                     ),
-                    // Glassmorphic/Claymorphic Difficulty Badge
                     Positioned(
                       top: 14,
                       right: 14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: difficultyColor.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          trek.difficulty.toUpperCase(),
-                          style: AppTextStyles.caption.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
+                      child: GlassChip(
+                        label: trek.rating.toStringAsFixed(1),
+                        icon: Icons.star_rounded,
+                        foreground: Colors.white,
+                      ),
+                    ),
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 14,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(trek.name,
+                              style: AppType.title.copyWith(
+                                  color: Colors.white, fontSize: 21),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_rounded,
+                                  size: 13, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Text('${trek.region} Region',
+                                  style: AppType.caption
+                                      .copyWith(color: Colors.white70)),
+                            ],
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // Details section with generous spacing and strong scannability
-              Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title
-                    Text(
-                      trek.name,
-                      style: AppTextStyles.h2.copyWith(
-                        color: LightColors.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    // Region Sub-header
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on_rounded,
-                          size: 14,
-                          color: LightColors.forestPrimary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${trek.region} Region',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: LightColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    // Short Description
-                    Text(
-                      trek.shortDescription,
+            ),
+            // Body
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(trek.shortDescription,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: LightColors.textSecondary,
-                        height: 1.4,
+                      style: AppType.bodySm.copyWith(color: c.textSecondary)),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      _Metric(Icons.calendar_today_rounded,
+                          '${trek.durationDays}d', 'Duration'),
+                      _Metric(Icons.route_rounded, '${trek.distanceKm}km',
+                          'Distance'),
+                      _Metric(Icons.terrain_rounded, '${trek.maxAltitudeM}m',
+                          'Altitude'),
+                      const Spacer(),
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: c.primarySoft,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.arrow_forward_rounded,
+                            size: 18, color: c.primary),
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    // Divider
-                    Container(
-                      height: 1.5,
-                      color: LightColors.dividerLight.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(height: 16),
-                    // Row of stats & clean view detail arrow
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _CardMetric(
-                                icon: Icons.calendar_today_rounded,
-                                value: '${trek.durationDays} days',
-                                label: 'Duration',
-                              ),
-                              _CardMetric(
-                                icon: Icons.route_rounded,
-                                value: '${trek.distanceKm} km',
-                                label: 'Distance',
-                              ),
-                              _CardMetric(
-                                icon: Icons.terrain_rounded,
-                                value: '${trek.maxAltitudeM} m',
-                                label: 'Altitude',
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: LightColors.primaryLight,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: LightColors.forestPrimary.withValues(
-                                  alpha: 0.1,
-                                ),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 18,
-                            color: LightColors.forestPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ──────────────────────────────────────────────
-// Card Metric Column Widget
-// ──────────────────────────────────────────────
-class _CardMetric extends StatelessWidget {
+class _Metric extends StatelessWidget {
   final IconData icon;
   final String value;
   final String label;
-
-  const _CardMetric({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
+  const _Metric(this.icon, this.value, this.label);
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: LightColors.primaryLight,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, size: 13, color: LightColors.forestPrimary),
-        ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: AppTextStyles.caption.copyWith(
-                color: LightColors.textPrimary,
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-              ),
-            ),
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: LightColors.textTertiary,
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// ──────────────────────────────────────────────
-// Loading Shimmer State
-// ──────────────────────────────────────────────
-class _TreksLoadingShimmer extends StatelessWidget {
-  const _TreksLoadingShimmer();
-
-  @override
-  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.only(right: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Available Treks',
-            style: AppTextStyles.h1.copyWith(
-              color: LightColors.textPrimary,
-              fontSize: 30,
-            ),
+          Row(
+            children: [
+              Icon(icon, size: 13, color: c.primary),
+              const SizedBox(width: 5),
+              Text(value,
+                  style: AppType.caption.copyWith(
+                      color: c.textPrimary, fontWeight: FontWeight.w800)),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Loading curated routes...',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: LightColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 24),
-          ...List.generate(
-            3,
-            (index) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: ClayContainer(
-                depth: 3,
-                spread: 1.5,
-                borderRadius: 22,
-                color: Colors.white,
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 200,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: LightColors.dividerLight,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      width: double.infinity,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: LightColors.dividerLight.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 160,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: LightColors.dividerLight.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          const SizedBox(height: 2),
+          Text(label,
+              style: AppType.caption.copyWith(color: c.textTertiary, fontSize: 10)),
         ],
       ),
     );
   }
 }
 
-// ──────────────────────────────────────────────
-// Error View with Retry
-// ──────────────────────────────────────────────
-class _TreksErrorView extends StatelessWidget {
-  final String error;
-  final VoidCallback onRetry;
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
-  const _TreksErrorView({required this.error, required this.onRetry});
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.actionLabel,
+    this.onAction,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 56, color: c.textTertiary),
+            const SizedBox(height: 16),
+            Text(title, style: AppType.title.copyWith(color: c.textPrimary)),
+            const SizedBox(height: 8),
+            Text(subtitle,
+                textAlign: TextAlign.center,
+                style: AppType.body.copyWith(color: c.textSecondary)),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 20),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: c.primary,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: onAction,
+                child: Text(actionLabel!, style: AppType.button),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _ErrorView({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.cloud_off_rounded,
-              size: 56,
-              color: LightColors.sosRed,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Could not load treks',
-              style: AppTextStyles.h3.copyWith(
-                color: LightColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: LightColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: LightColors.forestPrimary,
-                foregroundColor: Colors.white,
+            Icon(Icons.cloud_off_rounded, size: 48, color: c.textTertiary),
+            const SizedBox(height: 14),
+            Text('Failed to load treks',
+                style: AppType.title.copyWith(color: c.textPrimary)),
+            const SizedBox(height: 18),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: c.primary,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
+                    borderRadius: BorderRadius.circular(14)),
               ),
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Retry'),
+              onPressed: onRetry,
+              child: Text('Try again', style: AppType.button),
             ),
           ],
         ),
