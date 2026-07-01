@@ -1,12 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app_colors.dart';
 import 'app_text_styles.dart';
 
+class ThemeModeNotifier extends StateNotifier<bool> {
+  static const _themeKey = 'is_dark_theme';
+
+  ThemeModeNotifier() : super(true) {
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      state = prefs.getBool(_themeKey) ?? true;
+    } catch (_) {
+      // Fallback if preferences fail
+    }
+  }
+
+  Future<void> toggleTheme() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      state = !state;
+      await prefs.setBool(_themeKey, state);
+    } catch (_) {}
+  }
+}
+
+final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, bool>((ref) {
+  return ThemeModeNotifier();
+});
+
 /// Access theme data throughout the app using Riverpod
 final appThemeProvider = Provider<AppTheme>((ref) {
-  // Can be extended to watch a dynamic theme mode (light/dark)
-  return AppTheme(isDark: true);
+  final isDark = ref.watch(themeModeProvider);
+  return AppTheme(isDark: isDark);
 });
 
 class AppTheme {
@@ -52,14 +83,11 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: colors.card,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         elevation: 0,
       ),
     );
   }
-
 
   TextTheme get _textTheme {
     return TextTheme(
