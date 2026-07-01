@@ -8,12 +8,14 @@ class PathApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = ref.watch(appThemeProvider);
+    final isDark = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'PATH',
-      theme: theme.themeData,
+      theme: AppTheme(isDark: false).themeData,
+      darkTheme: AppTheme(isDark: true).themeData,
+      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
       routerConfig: AppRouter.router,
     );
   }
