@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_app/core/theme/app_text_styles.dart';
+import 'package:path_app/core/components/editorial_atoms.dart';
+import 'package:path_app/core/components/editorial_hero.dart';
+import 'package:path_app/core/theme/app_colors.dart';
+import 'package:path_app/core/theme/app_theme.dart';
+import 'package:path_app/core/theme/app_typography.dart';
 import 'package:path_app/core/theme/light_colors.dart';
 import 'package:path_app/core/animations/staggered_section.dart';
 import 'package:path_app/features/auth/presentation/viewmodels/auth_session_controller.dart';
@@ -65,6 +69,18 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
+/// Resolve a hero photo from a region/trek name.
+String _heroImageForName(String name) {
+  final n = name.toLowerCase();
+  if (n.contains('everest')) return 'assets/images/everest_base_camp.png';
+  if (n.contains('annapurna')) return 'assets/images/annapurna_circuit.png';
+  if (n.contains('langtang')) return 'assets/images/langtang_valley.png';
+  if (n.contains('poon') || n.contains('ghorepani')) {
+    return 'assets/images/poon_hill.png';
+  }
+  return 'assets/images/everest_base_camp.png';
+}
+
 // ──────────────────────────────────────────────
 // Dashboard Body — Main scrollable content
 // ──────────────────────────────────────────────
@@ -76,6 +92,9 @@ class _DashboardBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(appThemeProvider);
+    final colors = theme.colors;
+
     final activeState = ref.watch(activeTrekProvider);
     final isTracking =
         activeState.region != null && activeState.region!.isNotEmpty;
@@ -88,15 +107,19 @@ class _DashboardBody extends ConsumerWidget {
     final sosState = ref.watch(sosViewModelProvider);
     final queuedCount = sosState.queuedAlerts.length;
 
-    // Resolve details if active
-    String heroTitle = 'Start an Expedition';
-    String heroSubtitle =
-        'No active tracking session. Discover trails and start your journey!';
+    // Resolve hero details
+    String heroEyebrow = 'No active expedition';
+    String heroTitle = 'Find your next summit';
+    String heroSubtitle = 'Discover handpicked trails and start your journey.';
     String heroStatus = 'INACTIVE';
+    Color heroStatusDot = LightColors.textTertiary;
     int progressPercent = 0;
+    String heroImage = featuredTreks.isNotEmpty
+        ? featuredTreks.first.coverImageAsset
+        : 'assets/images/everest_base_camp.png';
     VoidCallback onHeroTap = () => context.go('/treks');
     VoidCallback? onHeroSecondaryTap;
-    String heroButtonLabel = 'Explore Available Treks';
+    String heroButtonLabel = 'Explore treks';
     String? heroSecondaryButtonLabel;
 
     String distanceValue = '0.0 km';
@@ -105,7 +128,12 @@ class _DashboardBody extends ConsumerWidget {
 
     if (isTracking) {
       heroTitle = activeState.region!;
-      heroStatus = activeState.isFinished ? 'COMPLETED' : 'SIMULATOR LIVE';
+      heroImage = _heroImageForName(activeState.region!);
+      heroStatus = activeState.isFinished ? 'COMPLETED' : 'LIVE';
+      heroStatusDot = activeState.isFinished
+          ? LightColors.successGreen
+          : LightColors.peakAmber;
+      heroEyebrow = 'Active expedition';
 
       final waypoints = getWaypointsForRegion(activeState.region!);
       final totalWps = activeState.totalCheckpoints > 0
@@ -120,13 +148,12 @@ class _DashboardBody extends ConsumerWidget {
       if (waypoints.isNotEmpty) {
         if (curIdx < waypoints.length - 1) {
           heroSubtitle =
-              'Day ${curIdx + 1} • ${waypoints[curIdx].name} to ${waypoints[curIdx + 1].name}';
+              'Day ${curIdx + 1} • ${waypoints[curIdx].name} → ${waypoints[curIdx + 1].name}';
         } else {
           heroSubtitle =
-              'Day ${curIdx + 1} • Destination Reached at ${waypoints.last.name}';
+              'Day ${curIdx + 1} • Destination reached at ${waypoints.last.name}';
         }
 
-        // Ascent gain: current altitude minus starting altitude
         if (activeState.currentAltitude != null) {
           final startAlt = waypoints.first.alt;
           final diff = (activeState.currentAltitude! - startAlt)
@@ -141,12 +168,12 @@ class _DashboardBody extends ConsumerWidget {
       distanceValue = '${activeState.distanceWalkedKm.toStringAsFixed(1)} km';
       etaValue = activeState.isFinished
           ? 'Finished'
-          : 'Day ${curIdx + 1} • Active';
-      heroButtonLabel = 'Resume Tracker';
+          : 'Day ${curIdx + 1}';
+      heroButtonLabel = 'Resume tracker';
       onHeroTap = () =>
           context.push('/map-weather/navigator', extra: activeState.region);
 
-      heroSecondaryButtonLabel = 'Stop Tracker';
+      heroSecondaryButtonLabel = 'Stop';
       onHeroSecondaryTap = () {
         HapticFeedback.mediumImpact();
         ref.read(activeTrekProvider.notifier).clearTrek();
@@ -154,43 +181,43 @@ class _DashboardBody extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: LightColors.stoneWhite,
+      backgroundColor: colors.canvas,
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          color: LightColors.forestPrimary,
+          color: colors.primary,
           onRefresh: () async {
             ref.invalidate(dashboardOverviewProvider);
             ref.invalidate(trekListProvider);
             await ref.read(dashboardOverviewProvider.future);
           },
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(0, 10, 0, 100),
+            padding: const EdgeInsets.fromLTRB(0, 8, 0, 110),
             children: [
-              // 0: Header
+              // Header
               StaggeredSection(
                 index: 0,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _DashboardHeader(
                     dateLabel: overview.header.dateLabel.isNotEmpty
                         ? overview.header.dateLabel
                         : 'Today',
                     greeting: overview.header.greeting.isNotEmpty
                         ? overview.header.greeting
-                        : 'Journey Dashboard',
+                        : 'Welcome back',
                     onAvatarTap: () => context.go('/profile'),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
               // Offline SOS queue warning banner
               if (queuedCount > 0) ...[
                 StaggeredSection(
                   index: 0,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: ClayContainer(
                       color: LightColors.peakAmber,
                       borderRadius: 16,
@@ -210,11 +237,10 @@ class _DashboardBody extends ConsumerWidget {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Offline Cache: $queuedCount SOS alerts queued for transmission. Retrying automatically...',
-                              style: const TextStyle(
+                              'Offline: $queuedCount SOS alerts queued. Retrying automatically…',
+                              style: AppType.caption.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
-                                fontSize: 12,
                               ),
                             ),
                           ),
@@ -223,110 +249,118 @@ class _DashboardBody extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
               ],
 
               // SOS Emergency Slider
               StaggeredSection(
                 index: 0,
                 child: const Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 20),
                   child: SosTriggerWidget(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              // 1: Expedition Hero
+              // Editorial expedition hero
               StaggeredSection(
                 index: 1,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _ExpeditionHeroCard(
-                    title: heroTitle,
-                    subtitle: heroSubtitle,
-                    status: heroStatus,
+                child: EditorialHero(
+                  imageAsset: heroImage,
+                  eyebrow: heroEyebrow,
+                  title: heroTitle,
+                  subtitle: heroSubtitle,
+                  height: 320,
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  onTap: onHeroTap,
+                  topTrailing: GlassChip(
+                    label: heroStatus,
+                    dotColor: heroStatusDot,
+                  ),
+                  bottomExtra: _HeroFooter(
                     progressPercent: progressPercent,
-                    onPlanTap: onHeroTap,
+                    showProgress: isTracking,
                     buttonLabel: heroButtonLabel,
+                    onTap: onHeroTap,
+                    secondaryLabel: heroSecondaryButtonLabel,
                     onSecondaryTap: onHeroSecondaryTap,
-                    secondaryButtonLabel: heroSecondaryButtonLabel,
                   ),
                 ),
               ),
               const SizedBox(height: 14),
 
-              // 2: Metric tiles
+              // Live metric strip (single neutral card, quiet stats)
               StaggeredSection(
                 index: 2,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _MetricTile(
-                          icon: Icons.route_rounded,
-                          value: distanceValue,
-                          label: 'Distance',
-                          accentColor: LightColors.forestPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _MetricTile(
-                          icon: Icons.trending_up_rounded,
-                          value: ascentValue,
-                          label: 'Ascent',
-                          accentColor: LightColors.altitudeBlue,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _MetricTile(
-                          icon: Icons.schedule_rounded,
-                          value: etaValue,
-                          label: 'ETA',
-                          accentColor: LightColors.peakAmber,
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _MetricStrip(
+                    distance: distanceValue,
+                    ascent: ascentValue,
+                    eta: etaValue,
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
 
-              // 3: Smart Actions
+              // Smart Actions
               StaggeredSection(
                 index: 3,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _SectionHeader(
-                        title: 'Smart Actions',
-                        trailingText: 'Customize',
-                        onTap: () => context.go('/profile'),
+                      EditorialSectionHeader(
+                        eyebrow: 'Jump back in',
+                        title: 'Quick actions',
+                        actionLabel: 'Rankings',
+                        onAction: () => context.push('/leaderboard'),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionTile(
+                              icon: Icons.terrain_rounded,
+                              title: 'Explore treks',
+                              subtitle: 'Discover routes',
+                              accentColor: LightColors.forestPrimary,
+                              onTap: () => context.go('/treks'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _ActionTile(
+                              icon: Icons.auto_awesome_rounded,
+                              title: 'AI guide',
+                              subtitle: 'Ask anything',
+                              accentColor: LightColors.peakAmber,
+                              onTap: () => context.push('/ai-guide'),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
                             child: _ActionTile(
-                              icon: Icons.terrain_rounded,
-                              title: 'Explore Treks',
-                              subtitle: 'Discover routes',
-                              accentColor: LightColors.forestPrimary,
-                              onTap: () => context.go('/treks'),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _ActionTile(
                               icon: Icons.map_rounded,
-                              title: 'Map + Weather',
+                              title: 'Map + weather',
                               subtitle: 'Trail conditions',
                               accentColor: LightColors.altitudeBlue,
                               onTap: () => context.go('/map-weather'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _ActionTile(
+                              icon: Icons.monitor_heart_rounded,
+                              title: 'AMS check',
+                              subtitle: 'Altitude safety',
+                              accentColor: LightColors.sosRed,
+                              onTap: () => context.push('/ams-tracker'),
                             ),
                           ),
                         ],
@@ -335,9 +369,9 @@ class _DashboardBody extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 30),
 
-              // 4: Featured Treks Carousel (full-bleed)
+              // Featured Treks Carousel (full-bleed)
               StaggeredSection(
                 index: 4,
                 child: FeaturedTrekCarousel(
@@ -346,30 +380,43 @@ class _DashboardBody extends ConsumerWidget {
                   onSeeAll: () => context.go('/treks'),
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 30),
 
-              // 5: Weather Glance
+              // Weather Glance
               StaggeredSection(
                 index: 5,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: WeatherGlanceWidget(
-                    onTap: () => context.go('/map-weather'),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 22),
-
-              // 6: Today Focus
-              StaggeredSection(
-                index: 6,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _SectionHeader(title: 'Today Focus'),
-                      const SizedBox(height: 12),
+                      EditorialSectionHeader(
+                        eyebrow: 'On the mountain',
+                        title: 'Conditions',
+                      ),
+                      const SizedBox(height: 16),
+                      WeatherGlanceWidget(
+                        onTap: () => context.go('/map-weather'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // Today Focus
+              StaggeredSection(
+                index: 6,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      EditorialSectionHeader(
+                        eyebrow: 'Stay on track',
+                        title: 'Today’s focus',
+                      ),
+                      const SizedBox(height: 16),
                       _FocusChecklist(tasks: focusTasks),
                       if (topInsight != null) ...[
                         const SizedBox(height: 12),
@@ -403,30 +450,21 @@ class _DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                dateLabel.toUpperCase(),
-                style: AppTextStyles.caption.copyWith(
-                  color: LightColors.textSecondary,
-                  letterSpacing: 0.8,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
-                ),
-              ),
-              const SizedBox(height: 4),
+              EyebrowLabel(dateLabel, color: c.textTertiary),
+              const SizedBox(height: 8),
               Text(
                 greeting,
-                style: AppTextStyles.h1.copyWith(
-                  color: LightColors.textPrimary,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  height: 1.1,
-                ),
+                style: AppType.displayXL.copyWith(color: c.textPrimary),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -437,21 +475,21 @@ class _DashboardHeader extends StatelessWidget {
         GestureDetector(
           onTap: onAvatarTap,
           child: Container(
-            width: 48,
-            height: 48,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: LightColors.primaryLight,
-              border: Border.all(
-                color: LightColors.forestPrimary.withValues(alpha: 0.2),
-                width: 2,
-              ),
+              color: c.surfaceElevated,
+              border: Border.all(color: c.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: const Icon(
-              Icons.person_rounded,
-              color: LightColors.forestPrimary,
-              size: 22,
-            ),
+            child: Icon(Icons.person_rounded, color: c.primary, size: 24),
           ),
         ),
       ],
@@ -460,271 +498,181 @@ class _DashboardHeader extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────
-// Expedition Hero Card
+// Hero footer — progress + CTAs over the photo
 // ──────────────────────────────────────────────
-class _ExpeditionHeroCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String status;
+class _HeroFooter extends StatelessWidget {
   final int progressPercent;
-  final VoidCallback onPlanTap;
+  final bool showProgress;
   final String buttonLabel;
+  final VoidCallback onTap;
+  final String? secondaryLabel;
   final VoidCallback? onSecondaryTap;
-  final String? secondaryButtonLabel;
 
-  const _ExpeditionHeroCard({
-    required this.title,
-    required this.subtitle,
-    required this.status,
+  const _HeroFooter({
     required this.progressPercent,
-    required this.onPlanTap,
+    required this.showProgress,
     required this.buttonLabel,
+    required this.onTap,
+    this.secondaryLabel,
     this.onSecondaryTap,
-    this.secondaryButtonLabel,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClayContainer(
-      depth: 6,
-      spread: 3,
-      borderRadius: 22,
-      color: LightColors.summitDark,
-      isDark: true,
-      padding: const EdgeInsets.all(18),
-      child: Stack(
-        children: [
-          // Decorative circles
-          Positioned(
-            right: -30,
-            top: -30,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 20,
-            bottom: -20,
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.03),
-              ),
-            ),
-          ),
-          // Content
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showProgress) ...[
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: status.contains('LIVE')
-                                ? LightColors.peakAmber
-                                : status.contains('COMPLETED')
-                                ? LightColors.successGreen
-                                : LightColors.textTertiary,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          status.toUpperCase(),
-                          style: AppTextStyles.caption.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: progressPercent / 100,
+                    minHeight: 6,
+                    backgroundColor: Colors.white.withValues(alpha: 0.25),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      LightColors.peakAmber,
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    '$progressPercent%',
-                    style: AppTextStyles.h3.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(width: 12),
               Text(
-                title,
-                style: AppTextStyles.h2.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 22,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: Colors.white.withValues(alpha: 0.85),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(99),
-                child: LinearProgressIndicator(
-                  value: progressPercent / 100,
-                  minHeight: 8,
-                  backgroundColor: Colors.white.withValues(alpha: 0.15),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    LightColors.peakAmber,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // CTA Buttons Row
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: onPlanTap,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: LightColors.summitDark,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(
-                        buttonLabel,
-                        style: AppTextStyles.button.copyWith(
-                          fontSize: 14,
-                          color: LightColors.summitDark,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (onSecondaryTap != null &&
-                      secondaryButtonLabel != null) ...[
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: onSecondaryTap,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(
-                            color: Colors.white24,
-                            width: 1.5,
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: Text(
-                          secondaryButtonLabel!,
-                          style: AppTextStyles.button.copyWith(
-                            fontSize: 14,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                '$progressPercent%',
+                style: AppType.titleSm.copyWith(color: Colors.white),
               ),
             ],
           ),
+          const SizedBox(height: 14),
         ],
-      ),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton(
+                onPressed: onTap,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: LightColors.summitDark,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  buttonLabel,
+                  style: AppType.button.copyWith(
+                    color: LightColors.summitDark,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            if (secondaryLabel != null && onSecondaryTap != null) ...[
+              const SizedBox(width: 10),
+              SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: onSecondaryTap,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white54, width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    secondaryLabel!,
+                    style: AppType.button.copyWith(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 }
 
 // ──────────────────────────────────────────────
-// Metric Tile
+// Metric Strip — one neutral card, three quiet stats
 // ──────────────────────────────────────────────
-class _MetricTile extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color accentColor;
+class _MetricStrip extends StatelessWidget {
+  final String distance;
+  final String ascent;
+  final String eta;
 
-  const _MetricTile({
-    required this.icon,
-    required this.value,
-    required this.label,
-    this.accentColor = LightColors.forestPrimary,
+  const _MetricStrip({
+    required this.distance,
+    required this.ascent,
+    required this.eta,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClayContainer(
-      depth: 4,
-      spread: 2,
-      borderRadius: 16,
-      color: Colors.white,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      decoration: BoxDecoration(
+        color: c.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: c.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(icon, size: 16, color: accentColor),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: AppTextStyles.h3.copyWith(
-              color: LightColors.textPrimary,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
+          Expanded(
+            child: StatBlock(
+              icon: Icons.route_rounded,
+              value: distance,
+              label: 'Distance',
+              accent: LightColors.forestPrimary,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: LightColors.textSecondary,
-              fontSize: 11,
+          _divider(c),
+          Expanded(
+            child: StatBlock(
+              icon: Icons.trending_up_rounded,
+              value: ascent,
+              label: 'Ascent',
+              accent: LightColors.altitudeBlue,
+            ),
+          ),
+          _divider(c),
+          Expanded(
+            child: StatBlock(
+              icon: Icons.schedule_rounded,
+              value: eta,
+              label: 'ETA',
+              accent: LightColors.peakAmber,
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _divider(AppColors c) => Container(
+    width: 1,
+    height: 42,
+    margin: const EdgeInsets.symmetric(horizontal: 8),
+    color: c.border,
+  );
 }
 
 // ──────────────────────────────────────────────
-// Action Tile
+// Action Tile (neutral card with accent icon)
 // ──────────────────────────────────────────────
 class _ActionTile extends StatelessWidget {
   final IconData icon;
@@ -743,14 +691,22 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+
     return GestureDetector(
-      onTap: onTap,
-      child: ClayContainer(
-        depth: 4,
-        spread: 2,
-        borderRadius: 18,
-        color: Colors.white,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
         padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: c.surfaceElevated,
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          border: Border.all(color: c.border),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -758,69 +714,24 @@ class _ActionTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.1),
+                color: accentColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Icon(icon, color: accentColor, size: 22),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Text(
               title,
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: LightColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppType.titleSm.copyWith(color: c.textPrimary),
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: AppTextStyles.caption.copyWith(
-                color: LightColors.textSecondary,
-              ),
+              style: AppType.caption.copyWith(color: c.textSecondary),
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────
-// Section Header
-// ──────────────────────────────────────────────
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String? trailingText;
-  final VoidCallback? onTap;
-
-  const _SectionHeader({required this.title, this.trailingText, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: AppTextStyles.h2.copyWith(
-              color: LightColors.textPrimary,
-              fontWeight: FontWeight.w700,
-              fontSize: 20,
-            ),
-          ),
-        ),
-        if (trailingText != null && onTap != null)
-          GestureDetector(
-            onTap: onTap,
-            child: Text(
-              trailingText!,
-              style: AppTextStyles.caption.copyWith(
-                color: LightColors.forestPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
@@ -835,13 +746,16 @@ class _FocusChecklist extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+
     if (tasks.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: LightColors.dividerLight),
+          color: c.surfaceElevated,
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          border: Border.all(color: c.border),
         ),
         child: Row(
           children: [
@@ -851,10 +765,10 @@ class _FocusChecklist extends StatelessWidget {
               size: 20,
             ),
             const SizedBox(width: 10),
-            Text(
-              'You are all set for today. Keep the momentum.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: LightColors.textSecondary,
+            Expanded(
+              child: Text(
+                'You are all set for today. Keep the momentum.',
+                style: AppType.bodySm.copyWith(color: c.textSecondary),
               ),
             ),
           ],
@@ -863,61 +777,66 @@ class _FocusChecklist extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LightColors.dividerLight),
+        color: c.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: c.border),
       ),
       child: Column(
-        children: tasks
-            .map(
-              (task) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      task.done
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked_rounded,
-                      size: 18,
-                      color: task.done
-                          ? LightColors.successGreen
-                          : LightColors.textTertiary,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            task.title,
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: LightColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                              decoration: task.done
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
-                          ),
-                          if (task.meta.isNotEmpty)
-                            Text(
-                              task.meta,
-                              style: AppTextStyles.caption.copyWith(
-                                color: LightColors.textSecondary,
-                                fontSize: 11,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
+        children: [
+          for (var i = 0; i < tasks.length; i++) ...[
+            if (i > 0) const SizedBox(height: 14),
+            _FocusRow(task: tasks[i]),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FocusRow extends StatelessWidget {
+  final DashboardTask task;
+  const _FocusRow({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          task.done
+              ? Icons.check_circle_rounded
+              : Icons.radio_button_unchecked_rounded,
+          size: 20,
+          color: task.done ? LightColors.successGreen : c.textTertiary,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                task.title,
+                style: AppType.bodySm.copyWith(
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  decoration:
+                      task.done ? TextDecoration.lineThrough : null,
                 ),
               ),
-            )
-            .toList(),
-      ),
+              if (task.meta.isNotEmpty)
+                Text(
+                  task.meta,
+                  style: AppType.caption.copyWith(color: c.textSecondary),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -932,66 +851,53 @@ class _InsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            LightColors.forestPrimary.withValues(alpha: 0.06),
-            LightColors.forestPrimary.withValues(alpha: 0.02),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: LightColors.forestPrimary.withValues(alpha: 0.12),
-        ),
+        color: c.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: c.primary.withValues(alpha: 0.18)),
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: LightColors.forestPrimary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              color: c.primary.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.lightbulb_outline_rounded,
-              color: LightColors.forestPrimary,
+              color: c.primary,
               size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   insight.title,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: LightColors.textPrimary,
+                  style: AppType.caption.copyWith(
+                    color: c.textSecondary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   insight.value,
-                  style: AppTextStyles.h3.copyWith(
-                    color: LightColors.forestPrimary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
+                  style: AppType.titleSm.copyWith(color: c.primary),
                 ),
                 if (insight.hint.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     insight.hint,
-                    style: AppTextStyles.caption.copyWith(
-                      color: LightColors.textSecondary,
-                      fontSize: 11,
-                    ),
+                    style: AppType.caption.copyWith(color: c.textSecondary),
                   ),
                 ],
               ],
@@ -1013,26 +919,27 @@ class _CenteredLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+
     return Scaffold(
-      backgroundColor: LightColors.stoneWhite,
+      backgroundColor: c.canvas,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
-              width: 36,
-              height: 36,
+            SizedBox(
+              width: 34,
+              height: 34,
               child: CircularProgressIndicator(
-                color: LightColors.forestPrimary,
+                color: c.primary,
                 strokeWidth: 3,
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             Text(
               label,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: LightColors.textSecondary,
-              ),
+              style: AppType.bodySm.copyWith(color: c.textSecondary),
             ),
           ],
         ),
@@ -1054,8 +961,11 @@ class _CenteredError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = AppColors(isDark);
+
     return Scaffold(
-      backgroundColor: LightColors.stoneWhite,
+      backgroundColor: c.canvas,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -1066,38 +976,40 @@ class _CenteredError extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: LightColors.redLight,
+                  color: isDark
+                      ? const Color(0xFF1B1B1B)
+                      : LightColors.redLight,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.error_outline_rounded,
                   size: 28,
-                  color: LightColors.sosRed,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: LightColors.textPrimary,
-                  fontWeight: FontWeight.w600,
+                  color: c.error,
                 ),
               ),
               const SizedBox(height: 18),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: AppType.title.copyWith(
+                  color: c.textPrimary,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 20),
               FilledButton(
                 onPressed: onRetry,
                 style: FilledButton.styleFrom(
-                  backgroundColor: LightColors.forestPrimary,
+                  backgroundColor: c.primary,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 28,
-                    vertical: 12,
+                    vertical: 14,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: Text(actionLabel),
+                child: Text(actionLabel, style: AppType.button),
               ),
             ],
           ),
