@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_app/core/components/clay_container.dart';
 import 'package:path_app/core/theme/app_text_styles.dart';
+import 'package:path_app/core/theme/dark_colors.dart';
 import 'package:path_app/core/theme/light_colors.dart';
+import 'package:path_app/core/theme/app_theme.dart';
 import 'package:path_app/features/treks/domain/entities/itinerary_step.dart';
 import 'package:path_app/features/treks/domain/entities/trek_summary.dart';
 import 'package:path_app/features/treks/presentation/viewmodels/trek_viewmodel.dart';
@@ -32,25 +35,24 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final trekAsync = ref.watch(trekDetailsProvider(widget.trekId));
+    final colors = ref.watch(appThemeProvider).colors;
 
     return trekAsync.when(
       loading: () => Scaffold(
-        backgroundColor: LightColors.stoneWhite,
+        backgroundColor: colors.background,
         appBar: AppBar(
           title: const Text('Loading...'),
-          backgroundColor: LightColors.summitDark,
-          foregroundColor: Colors.white,
+          backgroundColor: colors.surface,
+          foregroundColor: colors.textPrimary,
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: LightColors.forestPrimary),
-        ),
+        body: Center(child: CircularProgressIndicator(color: colors.primary)),
       ),
       error: (error, stack) => Scaffold(
-        backgroundColor: LightColors.stoneWhite,
+        backgroundColor: colors.background,
         appBar: AppBar(
           title: const Text('Error'),
-          backgroundColor: LightColors.summitDark,
-          foregroundColor: Colors.white,
+          backgroundColor: colors.surface,
+          foregroundColor: colors.textPrimary,
         ),
         body: Center(
           child: Padding(
@@ -58,16 +60,16 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline_rounded,
                   size: 48,
-                  color: LightColors.sosRed,
+                  color: colors.error,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Failed to load trek details',
                   style: AppTextStyles.h3.copyWith(
-                    color: LightColors.textPrimary,
+                    color: colors.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -76,7 +78,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                   error.toString(),
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: LightColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -84,7 +86,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                   onPressed: () =>
                       ref.invalidate(trekDetailsProvider(widget.trekId)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: LightColors.forestPrimary,
+                    backgroundColor: colors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -101,13 +103,13 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
       data: (trek) {
         if (trek == null) {
           return Scaffold(
-            backgroundColor: LightColors.stoneWhite,
+            backgroundColor: colors.background,
             appBar: AppBar(title: const Text('Trek Details')),
             body: Center(
               child: Text(
                 'Trek not found.',
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: LightColors.textSecondary,
+                  color: colors.textSecondary,
                 ),
               ),
             ),
@@ -115,7 +117,8 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
         }
 
         return Scaffold(
-          backgroundColor: LightColors.stoneWhite,
+          backgroundColor: colors.background,
+          bottomNavigationBar: _buildActionBar(trek),
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -221,12 +224,73 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
     );
   }
 
+  Widget _buildActionBar(TrekSummary trek) {
+    final colors = ref.watch(appThemeProvider).colors;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPad),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _ActionBarIcon(
+            icon: Icons.backpack_rounded,
+            label: 'Gear',
+            color: colors.accent,
+            onTap: () => context.push('/gear/${trek.id}', extra: trek.name),
+          ),
+          const SizedBox(width: 10),
+          _ActionBarIcon(
+            icon: Icons.menu_book_rounded,
+            label: 'Journal',
+            color: colors.info,
+            onTap: () => context.push('/journal/${trek.id}', extra: trek.name),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: SizedBox(
+              height: 54,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: () => _showSafetyWaiverDialog(context, trek.id),
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: Text(
+                  'Start Trek',
+                  style: AppTextStyles.button.copyWith(
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTabSwitcher() {
+    final colors = ref.watch(appThemeProvider).colors;
     return ClayContainer(
       depth: 4,
       spread: 2,
       borderRadius: 20,
-      color: LightColors.stoneWhite,
+      color: colors.background,
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
@@ -242,7 +306,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                 spread: _activeTab == 0 ? 2 : 0,
                 borderRadius: 16,
                 isFlat: _activeTab != 0,
-                color: _activeTab == 0 ? Colors.white : Colors.transparent,
+                color: _activeTab == 0 ? colors.surface : Colors.transparent,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Center(
                   child: Text(
@@ -250,8 +314,8 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w800,
                       color: _activeTab == 0
-                          ? LightColors.forestPrimary
-                          : LightColors.textSecondary,
+                          ? colors.primary
+                          : colors.textSecondary,
                     ),
                   ),
                 ),
@@ -270,7 +334,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                 spread: _activeTab == 1 ? 2 : 0,
                 borderRadius: 16,
                 isFlat: _activeTab != 1,
-                color: _activeTab == 1 ? Colors.white : Colors.transparent,
+                color: _activeTab == 1 ? colors.surface : Colors.transparent,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Center(
                   child: Text(
@@ -278,8 +342,8 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w800,
                       color: _activeTab == 1
-                          ? LightColors.forestPrimary
-                          : LightColors.textSecondary,
+                          ? colors.primary
+                          : colors.textSecondary,
                     ),
                   ),
                 ),
@@ -291,7 +355,112 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
     );
   }
 
+  void _showSafetyWaiverDialog(BuildContext context, String trekId) {
+    final colors = ref.read(appThemeProvider).colors;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.gavel_rounded, color: colors.error, size: 24),
+              const SizedBox(width: 10),
+              Text(
+                'Safety Waiver & Terms',
+                style: AppTextStyles.h3.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Before starting your adventure, you must acknowledge the risks under US Outdoor Activity Liability laws:',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _DisclaimerBullet(
+                  icon: Icons.dangerous_outlined,
+                  text:
+                      'Wilderness trekking carries severe risks of injury, altitude sickness, wildlife encounters, or death.',
+                ),
+                _DisclaimerBullet(
+                  icon: Icons.signal_wifi_off_rounded,
+                  text:
+                      'GPS, maps, and weather alerts are estimates and can fail. Do not rely solely on digital navigation.',
+                ),
+                _DisclaimerBullet(
+                  icon: Icons.privacy_tip_outlined,
+                  text:
+                      'We collect background GPS locations locally to track progress and security vitals (COPPA & CalOPPA compliant).',
+                ),
+                _DisclaimerBullet(
+                  icon: Icons.medical_services_outlined,
+                  text:
+                      'Ensure you have proper equipment, health insurance, and local rescue contacts before departing.',
+                ),
+              ],
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'CANCEL',
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                HapticFeedback.heavyImpact();
+                Navigator.of(context).pop();
+                context.push('/map-weather/navigator', extra: trekId);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                minimumSize: const Size(120, 44),
+              ),
+              child: const Text('I AGREE'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildRouteProfileTab(TrekSummary trek) {
+    final theme = ref.watch(appThemeProvider);
+    final colors = theme.colors;
+    final isDark = theme.isDark;
+
     return Column(
       key: const ValueKey(0),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,14 +472,14 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
               label: 'Duration',
               value: '${trek.durationDays} days',
               icon: Icons.calendar_month_rounded,
-              accentColor: LightColors.forestPrimary,
+              accentColor: colors.primary,
             ),
             const SizedBox(width: 12),
             _StatTile(
               label: 'Distance',
               value: '${trek.distanceKm} km',
               icon: Icons.route_rounded,
-              accentColor: LightColors.altitudeBlue,
+              accentColor: colors.info,
             ),
           ],
         ),
@@ -321,14 +490,14 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
               label: 'Ascent',
               value: '+${trek.elevationGainM} m',
               icon: Icons.trending_up_rounded,
-              accentColor: LightColors.peakAmber,
+              accentColor: colors.accent,
             ),
             const SizedBox(width: 12),
             _StatTile(
               label: 'Max Altitude',
               value: '${trek.maxAltitudeM} m',
               icon: Icons.terrain_rounded,
-              accentColor: LightColors.sosRed,
+              accentColor: colors.error,
             ),
           ],
         ),
@@ -345,22 +514,19 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
           depth: 6,
           spread: 3,
           borderRadius: 22,
-          color: Colors.white,
+          color: colors.surface,
           padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.map_rounded,
-                    color: LightColors.forestPrimary,
-                  ),
+                  Icon(Icons.map_rounded, color: colors.primary),
                   const SizedBox(width: 10),
                   Text(
                     'LIVE TRAIL MAP & PLANNER',
                     style: AppTextStyles.caption.copyWith(
-                      color: LightColors.forestPrimary,
+                      color: colors.primary,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.8,
                     ),
@@ -371,29 +537,31 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
               Text(
                 'Offline GIS route maps are locked for ${trek.region} region. Track checkpoints and elevation metrics without cellular coverage.',
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: LightColors.textSecondary,
+                  color: colors.textSecondary,
                   fontSize: 13,
                 ),
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'GPS Offline Support: Engaged',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: LightColors.successGreen,
+                        color: isDark
+                            ? DarkColors.bioluminescent
+                            : LightColors.successGreen,
                       ),
                     ),
                   ),
                   ElevatedButton.icon(
                     onPressed: () {
-                      context.push('/map-weather/navigator', extra: trek.name);
+                      _showSafetyWaiverDialog(context, trek.id);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: LightColors.forestPrimary,
+                      backgroundColor: colors.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       minimumSize: const Size(0, 40),
@@ -413,11 +581,151 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        // Permits Booking Card (Tactile Clay)
+        ClayContainer(
+          depth: 6,
+          spread: 3,
+          borderRadius: 22,
+          color: colors.surface,
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.assignment_ind_rounded, color: colors.accent),
+                  const SizedBox(width: 10),
+                  Text(
+                    'TREK PERMITS & ENTRY CARDS',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.accent,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'TIMS cards and National Park / conservation area entry permits are required to enter the ${trek.region} region checkpoints.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Pre-booking: Recommended',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colors.accent,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      String regionKey = 'Everest';
+                      if (trek.region.contains('Annapurna')) {
+                        regionKey = 'Annapurna';
+                      } else if (trek.region.contains('Langtang'))
+                        regionKey = 'Langtang';
+                      else if (trek.region.contains('Poon'))
+                        regionKey = 'Poon Hill';
+                      else if (trek.region.contains('Manaslu'))
+                        regionKey = 'Manaslu';
+                      context.push('/permits/checkout', extra: regionKey);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.accent,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      minimumSize: const Size(0, 40),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                    icon: const Icon(Icons.wallet_rounded, size: 16),
+                    label: const Text('BOOK PERMITS'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Safety / Liability Disclaimer Card (US Law compliance)
+        ClayContainer(
+          depth: 4,
+          spread: 2,
+          borderRadius: 22,
+          color: colors.surface,
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.security_rounded, color: colors.error),
+                  const SizedBox(width: 10),
+                  Text(
+                    'SAFETY & LIABILITY NOTICE',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.error,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Under US Federal & State Wilderness Liability doctrines: Trekking is an active, outdoor adventure sport carrying risk of physical injury, altitude sickness, or death. GPS tracking, terrain data, and weather reports are estimates only and cannot replace professional mountain guides, analog topographical maps, and standard safety precautions. You assume all liability and risk.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.health_and_safety_outlined,
+                    size: 14,
+                    color: colors.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Preparedness Check: Always carry analog backup navigation and register with local checkpoint ranger services.',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildItineraryTab(TrekSummary trek) {
+    final colors = ref.watch(appThemeProvider).colors;
     return Column(
       key: const ValueKey(1),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,7 +734,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
         Text(
           'Overview',
           style: AppTextStyles.h2.copyWith(
-            color: LightColors.textPrimary,
+            color: colors.textPrimary,
             fontWeight: FontWeight.w800,
             fontSize: 20,
           ),
@@ -435,7 +743,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
         Text(
           trek.longDescription,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: LightColors.textSecondary,
+            color: colors.textSecondary,
             height: 1.5,
           ),
         ),
@@ -445,7 +753,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
         Text(
           'Highlights',
           style: AppTextStyles.h2.copyWith(
-            color: LightColors.textPrimary,
+            color: colors.textPrimary,
             fontWeight: FontWeight.w800,
             fontSize: 20,
           ),
@@ -458,22 +766,18 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
               depth: 3,
               spread: 1.5,
               borderRadius: 14,
-              color: Colors.white,
+              color: colors.surface,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.stars_rounded,
-                    size: 18,
-                    color: LightColors.forestPrimary,
-                  ),
+                  Icon(Icons.stars_rounded, size: 18, color: colors.primary),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       highlight,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: LightColors.textPrimary,
+                        color: colors.textPrimary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -489,7 +793,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
         Text(
           'Day-by-Day Itinerary',
           style: AppTextStyles.h2.copyWith(
-            color: LightColors.textPrimary,
+            color: colors.textPrimary,
             fontWeight: FontWeight.w800,
             fontSize: 20,
           ),
@@ -497,9 +801,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
         const SizedBox(height: 4),
         Text(
           'Slide cards or tap nodes to navigate structured checkpoints.',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: LightColors.textSecondary,
-          ),
+          style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary),
         ),
         const SizedBox(height: 16),
 
@@ -514,6 +816,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
   }
 
   Widget _buildDayStepperNodes(List<ItineraryStep> steps) {
+    final colors = ref.watch(appThemeProvider).colors;
     return SizedBox(
       height: 54,
       child: Stack(
@@ -526,7 +829,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
             child: Container(
               height: 4,
               decoration: BoxDecoration(
-                color: LightColors.forestPrimary.withValues(alpha: 0.15),
+                color: colors.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -560,9 +863,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                         depth: isActive ? 6 : 2,
                         spread: isActive ? 2.5 : 1,
                         borderRadius: 99,
-                        color: isActive
-                            ? LightColors.forestPrimary
-                            : Colors.white,
+                        color: isActive ? colors.primary : colors.surface,
                         padding: EdgeInsets.zero,
                         child: SizedBox(
                           width: 42,
@@ -571,9 +872,7 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
                             child: Text(
                               'D${index + 1}',
                               style: TextStyle(
-                                color: isActive
-                                    ? Colors.white
-                                    : LightColors.forestPrimary,
+                                color: isActive ? Colors.white : colors.primary,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 13,
                               ),
@@ -593,8 +892,11 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
   }
 
   Widget _buildItineraryCarousel(List<ItineraryStep> steps) {
+    final colors = ref.watch(appThemeProvider).colors;
+    final isDark = ref.watch(appThemeProvider).isDark;
+
     return SizedBox(
-      height: 310,
+      height: 360,
       child: PageView.builder(
         controller: _dayPageController,
         itemCount: steps.length,
@@ -606,170 +908,270 @@ class _TrekDetailsScreenState extends ConsumerState<TrekDetailsScreen> {
         physics: const BouncingScrollPhysics(),
         itemBuilder: (context, index) {
           final step = steps[index];
+          final diffColor = step.difficulty.toLowerCase() == 'easy'
+              ? LightColors.successGreen
+              : step.difficulty.toLowerCase() == 'moderate'
+              ? LightColors.peakAmber
+              : LightColors.sosRed;
+
+          final isHighAltitude = step.altitudeM > 3000;
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: ClayContainer(
               depth: 4,
               spread: 2,
-              borderRadius: 22,
-              color: Colors.white,
-              padding: const EdgeInsets.all(16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
+              borderRadius: 24,
+              color: colors.surface,
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Row: Title & Day Label
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Row: Title & Day Label
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              step.title,
-                              style: AppTextStyles.h3.copyWith(
-                                color: LightColors.textPrimary,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
-                            ),
+                      Expanded(
+                        child: Text(
+                          step.title,
+                          style: AppTextStyles.h3.copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: LightColors.forestPrimary.withValues(
-                                alpha: 0.1,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Day ${index + 1}',
-                              style: AppTextStyles.caption.copyWith(
-                                color: LightColors.forestPrimary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Step Description
-                      Text(
-                        step.description,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: LightColors.textSecondary,
-                          height: 1.45,
-                          fontSize: 13,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      // Metric Badge Row
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          _MetricBadge(
-                            icon: Icons.terrain_rounded,
-                            label: '${step.altitudeM} m',
-                            color: LightColors.altitudeBlue,
-                          ),
-                          _MetricBadge(
-                            icon: Icons.schedule_rounded,
-                            label: step.hikingTime,
-                            color: LightColors.peakAmber,
-                            key: ValueKey('time_${step.hikingTime}'),
-                          ),
-                          _MetricBadge(
-                            icon: Icons.speed_rounded,
-                            label: step.difficulty,
-                            color: step.difficulty == 'Easy'
-                                ? LightColors.successGreen
-                                : step.difficulty == 'Moderate'
-                                ? LightColors.peakAmber
-                                : LightColors.sosRed,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Recommended Stays / Hotels Box
+                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: LightColors.primaryLight,
-                          borderRadius: BorderRadius.circular(12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.hotel_rounded,
-                              size: 16,
-                              color: LightColors.forestPrimary,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'RECOMMENDED STAYS:',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: LightColors.forestPrimary,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 9,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    step.stays.join(', '),
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: LightColors.summitDark,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Day ${index + 1}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: colors.primary,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                      // GIS Location status
-                      if (step.latitude != null && step.longitude != null) ...[
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on_rounded,
-                              size: 12,
-                              color: LightColors.textTertiary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'GIS Location: ${step.latitude!.toStringAsFixed(4)}, ${step.longitude!.toStringAsFixed(4)} (Cached)',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: LightColors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'SpaceGrotesk',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                     ],
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  // Step Description
+                  Expanded(
+                    child: Text(
+                      step.description,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: colors.textSecondary,
+                        height: 1.5,
+                        fontSize: 13,
+                      ),
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Metric Badge Row
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _MetricBadge(
+                        icon: Icons.terrain_rounded,
+                        label: '${step.altitudeM} m',
+                        color: colors.info,
+                      ),
+                      _MetricBadge(
+                        icon: Icons.schedule_rounded,
+                        label: step.hikingTime,
+                        color: colors.accent,
+                      ),
+                      _MetricBadge(
+                        icon: Icons.speed_rounded,
+                        label: step.difficulty,
+                        color: diffColor,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Altitude warning
+                  if (isHighAltitude)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.error.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: colors.error.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            size: 14,
+                            color: colors.error,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Altitude > 3,000m: Ascend slowly. Stay hydrated to mitigate AMS symptoms.',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: colors.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  // Recommended Stays / Hotels Box
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? DarkColors.undergrowth
+                          : LightColors.primaryLight,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.hotel_rounded,
+                          size: 16,
+                          color: LightColors.trailGreen,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'RECOMMENDED STAYS',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: colors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 9,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                step.stays.join(', '),
+                                style: AppTextStyles.caption.copyWith(
+                                  color: colors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// Action Bar Icon Button (Gear / Journal)
+// ──────────────────────────────────────────────
+class _ActionBarIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionBarIcon({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 56,
+        height: 54,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// Disclaimer Bullet Widget
+// ──────────────────────────────────────────────
+class _DisclaimerBullet extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _DisclaimerBullet({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark
+        ? AppTheme(isDark: true).colors
+        : AppTheme(isDark: false).colors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: colors.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontSize: 12,
+                color: colors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -793,12 +1195,17 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark
+        ? AppTheme(isDark: true).colors
+        : AppTheme(isDark: false).colors;
+
     return Expanded(
       child: ClayContainer(
         depth: 4,
         spread: 2,
         borderRadius: 18,
-        color: Colors.white,
+        color: colors.surface,
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -816,7 +1223,7 @@ class _StatTile extends StatelessWidget {
             Text(
               value,
               style: AppTextStyles.bodyLarge.copyWith(
-                color: LightColors.textPrimary,
+                color: colors.textPrimary,
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
               ),
@@ -825,7 +1232,7 @@ class _StatTile extends StatelessWidget {
             Text(
               label,
               style: AppTextStyles.caption.copyWith(
-                color: LightColors.textSecondary,
+                color: colors.textSecondary,
                 fontSize: 11,
               ),
             ),
@@ -845,7 +1252,6 @@ class _MetricBadge extends StatelessWidget {
   final Color color;
 
   const _MetricBadge({
-    super.key,
     required this.icon,
     required this.label,
     required this.color,
